@@ -11,22 +11,26 @@ const terms = (await getCollection('glossary')).sort((a, b) =>
 
 <Base title="Glossary" summary="Terms of art from the Sundered Isles.">
   <h1>Glossary</h1>
-  <dl class="glossary">
-    {terms.map((t) => {
-      const target = t.data.link_slug ? lookupSlug(t.data.link_slug) : null;
-      return (
-        <>
-          <dt id={slugify(t.data.term)}>{t.data.term}</dt>
-          <dd>
-            {t.data.definition}
-            {target && (
-              <>
-                {' '}<a href={target.url}>See {target.title} &rarr;</a>
-              </>
-            )}
-          </dd>
-        </>
-      );
-    })}
-  </dl>
+  {terms.length > 0 ? (
+    <dl class="glossary">
+      {terms.map((t) => {
+        const target = t.data.link_slug ? lookupSlug(t.data.link_slug) : null;
+        return (
+          <>
+            <dt id={slugify(t.data.term)}>{t.data.term}</dt>
+            <dd>
+              {t.data.definition}
+              {target && (
+                <>
+                  {' '}<a href={target.url}>See {target.title} &rarr;</a>
+                </>
+              )}
+            </dd>
+          </>
+        );
+      })}
+    </dl>
+  ) : (
+    <p class="empty-state">No terms yet &mdash; the chronicle awaits.</p>
+  )}
 </Base>

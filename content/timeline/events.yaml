@@ -1,15 +1,1 @@
-- id: the-sundering-year
-  date: "0801-00-00"
-  display_date: "The Year the Sea Broke"
-  description: The Sundering cracks the sea-continent apart, drowning the old kingdoms and birthing the Shattered Reach.
-  related: [the-sundering, the-shattered-reach]
-- id: mutiny-at-kells-hollow
-  date: "0847-03-12"
-  display_date: "12th of Highstorm, 847"
-  description: House Veldrane seizes the customs house at Kell's Hollow and imposes its tariff — the Mutiny at Kell's Hollow.
-  related: [house-veldrane, kells-hollow, captain-powderkeg]
-- id: third-barge-burns
-  date: "0847-09-30"
-  display_date: "30th of Lowtide, 847"
-  description: A black flag burns the third Veldrane powder-barge; Captain Powderkeg swears an oath to hang Captain Ferocious.
-  related: [captain-ferocious, captain-powderkeg]
+[]

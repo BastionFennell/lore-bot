@@ -10,14 +10,18 @@ const entries = (await getCollection('maps')).sort((a, b) =>
 
 <Base title="Maps" summary="Charts of the Sundered Isles.">
   <h1>Maps</h1>
-  <ul class="card-list">
-    {entries.map((e) => (
-      <li>
-        <div class="title">
-          <a href={urlForType('map', e.id)}>{e.data.title}</a>
-        </div>
-        <div class="summary">{e.data.summary}</div>
-      </li>
-    ))}
-  </ul>
+  {entries.length > 0 ? (
+    <ul class="card-list">
+      {entries.map((e) => (
+        <li>
+          <div class="title">
+            <a href={urlForType('map', e.id)}>{e.data.title}</a>
+          </div>
+          <div class="summary">{e.data.summary}</div>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p class="empty-state">No maps yet &mdash; the chronicle awaits.</p>
+  )}
 </Base>

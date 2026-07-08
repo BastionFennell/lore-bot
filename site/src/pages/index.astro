@@ -42,14 +42,18 @@ const sections = [
   </ul>
 
   <h2>Recently updated</h2>
-  <ul class="card-list">
-    {recent.map((e) => (
-      <li>
-        <div class="title">
-          <a href={urlForType(e.data.type, e.id)}>{e.data.title}</a>
-        </div>
-        <div class="summary">{iso(e.data.updated)} &mdash; {e.data.summary}</div>
-      </li>
-    ))}
-  </ul>
+  {recent.length > 0 ? (
+    <ul class="card-list">
+      {recent.map((e) => (
+        <li>
+          <div class="title">
+            <a href={urlForType(e.data.type, e.id)}>{e.data.title}</a>
+          </div>
+          <div class="summary">{iso(e.data.updated)} &mdash; {e.data.summary}</div>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p class="empty-state">No entries yet &mdash; the chronicle awaits.</p>
+  )}
 </Base>

@@ -32,6 +32,10 @@ const allTags = [...new Set(entries.flatMap((e) => e.data.tags))].sort();
     </ul>
   )}
 
+  {entries.length === 0 && (
+    <p class="empty-state">No lore yet &mdash; the chronicle awaits.</p>
+  )}
+
   {groups.map(([type, label]) => {
     const items = byType(type);
     return (
