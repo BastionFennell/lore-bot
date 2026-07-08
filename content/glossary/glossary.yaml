@@ -25,3 +25,10 @@
   term: Tidebound
   definition: Magic users who have bound themselves or been bound to Fathoms. Their
     practice is known as tidebinding, taught by the four {{tidal-schools}}.
+- id: tidal-schools
+  term: Tidal Schools
+  definition: The four schools of tidebinding — New Moon, Waxing Half, Full Moon,
+    and Waning Half — each dedicated to a different Apex known as their Patron. Each
+    school teaches a distinct style of tidebinding specializing in its patron's domain.
+    The Tidal School of the Waxing Half was destroyed by the Kraken shortly before
+    the beginning of the story.
