@@ -1,9 +1,10 @@
 """SQLite-backed pending-operation state machine.
 
-One pending operation per user at a time. A pending row records the operation
-(as JSON), the clarifying question (if any), the preview message id (for the
-reaction handler), and a snapshot of the conversation context used to build it
-(so a correction can re-run the engine with the original context).
+One pending operation per user at a time. A pending row records the operation(s)
+(as a JSON list — a proposal may batch several write ops), the clarifying
+question (if any), the preview message id (for the reaction handler), and a
+snapshot of the conversation context used to build it (so a correction can
+re-run the engine with the original context).
 
 The clock is injectable (``now`` callable) so expiry is testable without sleeps.
 """
@@ -35,7 +36,7 @@ CREATE TABLE IF NOT EXISTS pending (
 class Pending:
     user_id: str
     state: str
-    operation: dict | None
+    operations: list[dict] | None  # a proposal's write ops (batch), or None
     question: str | None
     preview_message_id: str | None
     context: dict | None
@@ -57,7 +58,7 @@ class PendingStore:
         return Pending(
             user_id=row["user_id"],
             state=row["state"],
-            operation=json.loads(row["operation"]) if row["operation"] else None,
+            operations=json.loads(row["operation"]) if row["operation"] else None,
             question=row["question"],
             preview_message_id=row["preview_message_id"],
             context=json.loads(row["context"]) if row["context"] else None,
@@ -72,7 +73,7 @@ class PendingStore:
             (
                 p.user_id,
                 p.state,
-                json.dumps(p.operation) if p.operation is not None else None,
+                json.dumps(p.operations) if p.operations is not None else None,
                 p.question,
                 p.preview_message_id,
                 json.dumps(p.context) if p.context is not None else None,
@@ -95,14 +96,14 @@ class PendingStore:
     def set_awaiting_confirmation(
         self,
         user_id: str,
-        operation: dict,
+        operations: list[dict],
         preview_message_id: str | None = None,
         context: dict | None = None,
     ) -> Pending:
         p = Pending(
             user_id=str(user_id),
             state=AWAITING_CONFIRMATION,
-            operation=operation,
+            operations=operations,
             question=None,
             preview_message_id=str(preview_message_id) if preview_message_id is not None else None,
             context=context,
@@ -116,12 +117,12 @@ class PendingStore:
         user_id: str,
         question: str,
         context: dict | None = None,
-        operation: dict | None = None,
+        operations: list[dict] | None = None,
     ) -> Pending:
         p = Pending(
             user_id=str(user_id),
             state=AWAITING_CLARIFICATION,
-            operation=operation,
+            operations=operations,
             question=question,
             preview_message_id=None,
             context=context,

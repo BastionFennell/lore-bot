@@ -40,10 +40,39 @@ UPDATE_OP = {
     "tool": "update_field",
     "input": {"slug": "captain-powderkeg", "field": "status", "value": "dead"},
 }
+BATCH_OPS = [
+    {"tool": "add_glossary_term",
+     "input": {"term": "Kin", "definition": "Bound crew.", "link_slug": None}},
+    {"tool": "add_glossary_term",
+     "input": {"term": "Fathoms", "definition": "A depth measure.", "link_slug": None}},
+    {"tool": "add_timeline_event",
+     "input": {"date_in_fiction": "0849-02-11", "description": "A battle at sea",
+               "related_slugs": None}},
+]
+
+
+def test_batch_applies_in_one_commit(content_repo, content_root):
+    res = gitops.apply_operations(content_repo, content_root, BATCH_OPS, "you")
+    assert res.ok and res.committed
+    # exactly one new commit on top of init
+    count = git(content_repo, "rev-list", "--count", "HEAD").stdout.strip()
+    assert count == "2"
+    # all three changes present in that one commit
+    glossary = (content_root / "glossary" / "glossary.yaml").read_text()
+    assert "id: kin" in glossary and "id: fathoms" in glossary
+    events = (content_root / "timeline" / "events.yaml").read_text()
+    assert "A battle at sea" in events
+    # commit message: batch subject + per-op body lines
+    subject = git(content_repo, "log", "-1", "--format=%s").stdout.strip()
+    assert subject == "lore: 3 changes via batch (via @you)"
+    body = git(content_repo, "log", "-1", "--format=%b").stdout
+    assert "- glossary: kin" in body
+    assert "- glossary: fathoms" in body
+    assert "- timeline:" in body
 
 
 def test_no_remote_local_commit(content_repo, content_root):
-    res = gitops.apply_operation(content_repo, content_root, CREATE_OP, "you")
+    res = gitops.apply_operations(content_repo, content_root, CREATE_OP, "you")
     assert res.ok and res.committed and res.no_remote
     assert (content_root / "lore" / "locations" / "gull-reef.md").exists()
     log = git(content_repo, "log", "--oneline").stdout
@@ -56,7 +85,7 @@ def test_no_remote_local_commit(content_repo, content_root):
 def test_commit_push_happy(content_repo, content_root, tmp_path):
     bare = make_bare(tmp_path)
     add_origin(content_repo, bare)
-    res = gitops.apply_operation(content_repo, content_root, UPDATE_OP, "captainuser")
+    res = gitops.apply_operations(content_repo, content_root, UPDATE_OP, "captainuser")
     assert res.ok and res.pushed
     show = subprocess.run(
         ["git", "-C", str(bare), "show", "HEAD:content/lore/npcs/captain-powderkeg.md"],
@@ -128,6 +157,6 @@ def test_bails_on_unrelated_dirty_tree(content_repo, content_root):
     # dirty an unrelated file (append to its body, keeping frontmatter valid)
     sundering = content_root / "lore" / "concepts" / "the-sundering.md"
     sundering.write_text(sundering.read_text() + "\n<!-- hand edit -->\n")
-    res = gitops.apply_operation(content_repo, content_root, CREATE_OP, "you")
+    res = gitops.apply_operations(content_repo, content_root, CREATE_OP, "you")
     assert not res.ok
     assert "unrelated changes" in res.message

@@ -22,13 +22,29 @@ def make_store(tmp_path, clock):
 def test_confirmation_transition_and_lookup(tmp_path):
     store = make_store(tmp_path, Clock())
     op = {"tool": "update_field", "input": {"slug": "x", "field": "status", "value": "dead"}}
-    store.set_awaiting_confirmation("u1", operation=op, preview_message_id="m99",
+    store.set_awaiting_confirmation("u1", operations=[op], preview_message_id="m99",
                                     context={"message_text": "kill x"})
     p = store.get("u1")
     assert p.state == AWAITING_CONFIRMATION
-    assert p.operation == op
+    assert p.operations == [op]
     assert p.context["message_text"] == "kill x"
     assert store.get_by_preview_message_id("m99").user_id == "u1"
+
+
+def test_batch_operations_roundtrip(tmp_path):
+    store = make_store(tmp_path, Clock())
+    ops = [
+        {"tool": "add_glossary_term", "input": {"term": "Kin", "definition": "d", "link_slug": None}},
+        {"tool": "add_glossary_term", "input": {"term": "Apex", "definition": "d", "link_slug": None}},
+        {"tool": "add_timeline_event",
+         "input": {"date_in_fiction": "0849-02-11", "description": "battle", "related_slugs": None}},
+    ]
+    store.set_awaiting_confirmation("u1", operations=ops, preview_message_id="m1")
+    p = store.get("u1")
+    assert p.operations == ops  # full batch survives the JSON round-trip, in order
+    assert [o["tool"] for o in p.operations] == [
+        "add_glossary_term", "add_glossary_term", "add_timeline_event"
+    ]
 
 
 def test_clarification_transition(tmp_path):
@@ -43,7 +59,7 @@ def test_clarification_transition(tmp_path):
 def test_one_pending_per_user(tmp_path):
     store = make_store(tmp_path, Clock())
     store.set_awaiting_clarification("u1", question="Q1")
-    store.set_awaiting_confirmation("u1", operation={"tool": "no_action", "input": {}})
+    store.set_awaiting_confirmation("u1", operations=[{"tool": "no_action", "input": {}}])
     p = store.get("u1")
     assert p.state == AWAITING_CONFIRMATION  # replaced, not duplicated
     assert p.question is None
@@ -73,9 +89,9 @@ def test_correction_path_roundtrips_context(tmp_path):
     """The stored context is what the transport replays on a correction."""
     store = make_store(tmp_path, Clock())
     op = {"tool": "append_to_entry", "input": {"slug": "x", "section_heading": "History", "content": "y"}}
-    store.set_awaiting_confirmation("u1", operation=op,
+    store.set_awaiting_confirmation("u1", operations=[op],
                                     context={"message_text": "add history to x"})
     p = store.get("u1")
     # transport rebuilds the engine context + appends the correction
     assert p.context["message_text"] == "add history to x"
-    assert p.operation["input"]["section_heading"] == "History"
+    assert p.operations[0]["input"]["section_heading"] == "History"

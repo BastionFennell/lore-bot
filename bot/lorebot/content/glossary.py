@@ -38,9 +38,15 @@ def add_glossary_term(
     term: str,
     definition: str,
     link_slug: str | None = None,
+    current_content: str | None = None,
 ) -> GlossaryResult:
     path = Path(content_root) / GLOSSARY_RELPATH
-    old_content = path.read_text(encoding="utf-8") if path.exists() else ""
+    if current_content is not None:
+        # Batch planning: build against an earlier op's not-yet-written result
+        # rather than stale disk state.
+        old_content = current_content
+    else:
+        old_content = path.read_text(encoding="utf-8") if path.exists() else ""
     items = yaml.safe_load(old_content) or [] if old_content else []
     if not isinstance(items, list):
         raise ValueError("glossary.yaml is not a YAML list.")

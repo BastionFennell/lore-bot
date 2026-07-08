@@ -104,7 +104,7 @@ class LoreBot(discord.Client):
         user_id = str(message.author.id)
         if isinstance(outcome, engine_mod.ProposedWrite):
             try:
-                plan = preview.build_plan(self.config.content_root, index, outcome.operation)
+                plan = preview.build_plan(self.config.content_root, index, outcome.operations)
             except (entries_mod.SlugCollisionError, entries_mod.EntryError) as e:
                 self.store.clear(user_id)
                 await self._send(message.channel, f"⚠️ {e}")
@@ -113,7 +113,7 @@ class LoreBot(discord.Client):
             preview_msg = sent[-1] if sent else None
             self.store.set_awaiting_confirmation(
                 user_id,
-                operation=outcome.operation,
+                operations=outcome.operations,
                 preview_message_id=preview_msg.id if preview_msg else None,
                 context={"message_text": message.content},
             )
@@ -161,10 +161,10 @@ class LoreBot(discord.Client):
             result = await loop.run_in_executor(
                 None,
                 functools.partial(
-                    gitops.apply_operation,
+                    gitops.apply_operations,
                     self.config.repo_path,
                     self.config.content_root,
-                    pending.operation,
+                    pending.operations,
                     username,
                 ),
             )

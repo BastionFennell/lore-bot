@@ -122,13 +122,25 @@ def push_with_retry(repo: Path, rels: list[str]) -> ApplyResult:
                        committed=True, commit_sha=sha)
 
 
-def apply_operation(repo_path, content_root, operation: dict, username: str) -> ApplyResult:
+def _commit_message(plan: Plan, username: str) -> str:
+    """Single op keeps the terse one-line form; a batch summarises with a body
+    listing one line per op."""
+    if not plan.is_batch:
+        op = plan.ops[0]
+        return f"lore: {op.verb} {op.target} (via @{username})"
+    subject = f"lore: {len(plan.ops)} changes via batch (via @{username})"
+    body = "\n".join(f"- {op.label}" for op in plan.ops)
+    return f"{subject}\n\n{body}"
+
+
+def apply_operations(repo_path, content_root, operations, username: str) -> ApplyResult:
+    """Apply one op (dict) or a batch (list of dicts) as a single commit."""
     repo = Path(repo_path)
     content_root = Path(content_root)
 
     # Build once pre-pull to learn the target paths and surface blocking errors
     # (slug collision / unknown field) before touching git.
-    plan = build_plan(content_root, ContentIndex(content_root), operation)
+    plan = build_plan(content_root, ContentIndex(content_root), operations)
     rels = _rel_paths(repo, plan)
     allowed = set(rels)
 
@@ -152,12 +164,12 @@ def apply_operation(repo_path, content_root, operation: dict, username: str) -> 
                 conflict=True,
             )
         # Rebuild against the freshly-pulled tree so diffs/appends aren't stale.
-        plan = build_plan(content_root, ContentIndex(content_root), operation)
+        plan = build_plan(content_root, ContentIndex(content_root), operations)
         rels = _rel_paths(repo, plan)
 
     _write(plan)
     _git(repo, "add", *rels)
-    message = f"lore: {plan.verb} {plan.target} (via @{username})"
+    message = _commit_message(plan, username)
     _git(repo, "commit", "-m", message, "--author", AUTHOR)
     sha = _git(repo, "rev-parse", "HEAD").stdout.strip()
 

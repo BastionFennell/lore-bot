@@ -89,5 +89,52 @@ def test_glossary_plan_renders_item(content_root, index):
     }
     plan = build_plan(content_root, index, op)
     assert plan.kind == "add_glossary_term"
+    assert not plan.is_batch
     assert "```yaml" in plan.preview
     assert "grog" in plan.target
+
+
+def test_single_op_as_list_matches_dict(content_root, index):
+    op = {
+        "tool": "add_glossary_term",
+        "input": {"term": "Grog", "definition": "Watered rum.", "link_slug": None},
+    }
+    assert build_plan(content_root, index, [op]).preview == build_plan(
+        content_root, index, op
+    ).preview
+
+
+def test_batch_renders_numbered_sections_single_confirm(content_root, index):
+    ops = [
+        {"tool": "add_glossary_term",
+         "input": {"term": "Kin", "definition": "Bound crew.", "link_slug": None}},
+        {"tool": "add_glossary_term",
+         "input": {"term": "Fathoms", "definition": "A depth measure.", "link_slug": None}},
+        {"tool": "add_timeline_event",
+         "input": {"date_in_fiction": "0849-02-11", "description": "A battle at sea",
+                   "related_slugs": None}},
+    ]
+    plan = build_plan(content_root, index, ops)
+    assert plan.is_batch and len(plan.ops) == 3
+    # numbered per-op headers
+    assert "1/3 — glossary: kin" in plan.preview
+    assert "2/3 — glossary: fathoms" in plan.preview
+    assert "3/3 — timeline:" in plan.preview
+    # exactly one confirm line for the whole batch
+    assert plan.preview.count(CONFIRM_FOOTER) == 1
+    # both glossary terms land in the SAME file — chaining, not clobbering
+    gcontent = next(v for k, v in plan.files.items() if k.endswith("glossary.yaml"))
+    assert "id: kin" in gcontent and "id: fathoms" in gcontent
+
+
+def test_batch_collision_blocks_whole_thing_naming_op(content_root, index):
+    ops = [
+        {"tool": "add_glossary_term",
+         "input": {"term": "Kin", "definition": "Bound crew.", "link_slug": None}},
+        {"tool": "create_entry",
+         "input": {"type": "npc", "title": "Captain Powderkeg", "tags": [],
+                   "summary": "dup", "body_sections": []}},
+    ]
+    with pytest.raises(entries.SlugCollisionError) as exc:
+        build_plan(content_root, index, ops)
+    assert "2/2" in str(exc.value)  # names the offending op

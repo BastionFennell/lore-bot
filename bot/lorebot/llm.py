@@ -213,7 +213,12 @@ request_clarification rather than guess.
 2. READ BEFORE WRITE: You MUST call query_lore(slug) before proposing an \
 append_to_entry or update_field to an existing entry, so your proposal fits what is \
 already there (no redundant or contradictory additions, correct section targeting).
-3. ONE WRITE PER TURN: Propose at most one write operation. Do not batch writes.
+3. BATCH WHEN ASKED: When the user asks for several additions at once (e.g. \
+"add these five terms", a lore dump with multiple items), emit multiple write \
+tool calls in a SINGLE response — one call per requested item — and do not drop \
+any item. All the calls are previewed together and committed atomically. For a \
+single requested change, emit a single write call. Mixed types in one batch are \
+fine (e.g. some glossary terms plus a timeline event).
 4. WHEN NOT TO WRITE: If the message is chit-chat, a question you answered, or an \
 answer already consumed by a pending operation, call no_action. If you cannot \
 confidently resolve a target, call request_clarification.

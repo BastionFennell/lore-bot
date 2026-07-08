@@ -28,7 +28,8 @@ def test_read_then_write_returns_proposed_write_repo_untouched(content_repo, ind
     ])
     out = run_engine(client=client, model="m", context=_ctx("add to powderkeg"), index=index)
     assert isinstance(out, ProposedWrite)
-    assert out.operation["tool"] == "append_to_entry"
+    assert len(out.operations) == 1
+    assert out.operations[0]["tool"] == "append_to_entry"
     assert len(client.calls) == 2  # read executed, then write captured
     # repo is untouched — the engine never writes
     assert git(content_repo, "status", "--porcelain").stdout.strip() == ""
@@ -91,8 +92,70 @@ def test_write_takes_priority_over_other_calls(index):
     ])
     out = run_engine(client=client, model="m", context=_ctx(), index=index)
     assert isinstance(out, ProposedWrite)
-    assert out.operation["tool"] == "update_field"
+    assert len(out.operations) == 1
+    assert out.operations[0]["tool"] == "update_field"
     assert len(client.calls) == 1  # no read was executed; write short-circuits
+
+
+def test_batch_of_five_glossary_terms_captured_in_order(index):
+    terms = ["Kin", "Fathoms", "Apex", "Tidebound", "Tidal Schools"]
+    client = FakeAnthropicClient([
+        FakeMessage("tool_use", [
+            FakeToolUse("add_glossary_term",
+                        {"term": t, "definition": f"def {t}", "link_slug": None}, f"t{i}")
+            for i, t in enumerate(terms)
+        ]),
+    ])
+    out = run_engine(client=client, model="m", context=_ctx("add these five"), index=index)
+    assert isinstance(out, ProposedWrite)
+    assert [o["input"]["term"] for o in out.operations] == terms  # all, in order
+    assert all(o["tool"] == "add_glossary_term" for o in out.operations)
+
+
+def test_mixed_batch_glossary_and_timeline(index):
+    client = FakeAnthropicClient([
+        FakeMessage("tool_use", [
+            FakeToolUse("add_glossary_term",
+                        {"term": "Kin", "definition": "d", "link_slug": None}, "t1"),
+            FakeToolUse("add_timeline_event",
+                        {"date_in_fiction": "0849-02-11", "description": "A battle",
+                         "related_slugs": None}, "t2"),
+        ]),
+    ])
+    out = run_engine(client=client, model="m", context=_ctx(), index=index)
+    assert isinstance(out, ProposedWrite)
+    assert [o["tool"] for o in out.operations] == ["add_glossary_term", "add_timeline_event"]
+
+
+def test_writes_win_when_mixed_with_control_and_reads(index):
+    client = FakeAnthropicClient([
+        FakeMessage("tool_use", [
+            FakeToolUse("search_lore", {"query": "x"}, "t0"),
+            FakeToolUse("add_glossary_term",
+                        {"term": "Kin", "definition": "d", "link_slug": None}, "t1"),
+            FakeToolUse("no_action", {"reason": "nvm"}, "t2"),
+            FakeToolUse("add_glossary_term",
+                        {"term": "Apex", "definition": "d", "link_slug": None}, "t3"),
+        ]),
+    ])
+    out = run_engine(client=client, model="m", context=_ctx(), index=index)
+    assert isinstance(out, ProposedWrite)
+    # both writes captured, control + read ignored, no read executed (short-circuit)
+    assert [o["input"]["term"] for o in out.operations] == ["Kin", "Apex"]
+    assert len(client.calls) == 1
+
+
+def test_batch_over_cap_returns_error(index):
+    client = FakeAnthropicClient([
+        FakeMessage("tool_use", [
+            FakeToolUse("add_glossary_term",
+                        {"term": f"T{i}", "definition": "d", "link_slug": None}, f"t{i}")
+            for i in range(21)
+        ]),
+    ])
+    out = run_engine(client=client, model="m", context=_ctx(), index=index)
+    assert isinstance(out, Error)
+    assert "split" in out.message.lower()
 
 
 def test_iteration_cap_returns_error(index):

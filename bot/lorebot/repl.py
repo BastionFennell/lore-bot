@@ -64,7 +64,7 @@ def main() -> None:
 
         if isinstance(outcome, engine_mod.ProposedWrite):
             try:
-                plan = preview.build_plan(config.content_root, index, outcome.operation)
+                plan = preview.build_plan(config.content_root, index, outcome.operations)
             except (entries_mod.SlugCollisionError, entries_mod.EntryError) as e:
                 print(f"⚠️  {e}")
                 pending_ctx = pending_kind = None
@@ -72,8 +72,8 @@ def main() -> None:
             print("\n" + plan.preview)
             answer = _prompt("\nApply? [y/N] ").strip().lower()
             if answer == "y":
-                result = gitops.apply_operation(
-                    config.repo_path, config.content_root, outcome.operation, "you"
+                result = gitops.apply_operations(
+                    config.repo_path, config.content_root, outcome.operations, "you"
                 )
                 print(("✅ " if result.ok else "⚠️  ") + result.message)
                 if result.commit_sha:

@@ -48,9 +48,14 @@ def add_timeline_event(
     description: str,
     related_slugs: list[str] | None = None,
     display_date: str | None = None,
+    current_content: str | None = None,
 ) -> TimelineResult:
     path = Path(content_root) / TIMELINE_RELPATH
-    old_content = path.read_text(encoding="utf-8") if path.exists() else ""
+    if current_content is not None:
+        # Batch planning: build against an earlier op's not-yet-written result.
+        old_content = current_content
+    else:
+        old_content = path.read_text(encoding="utf-8") if path.exists() else ""
     items = yaml.safe_load(old_content) or [] if old_content else []
     if not isinstance(items, list):
         raise ValueError("events.yaml is not a YAML list.")

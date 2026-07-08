@@ -219,6 +219,7 @@ def create_entry(
     summary: str,
     body_sections: dict[str, str],
     today: str | None = None,
+    extra_slugs: set[str] | None = None,
 ) -> CreatedEntry:
     slug, content = build_new_entry(
         entry_type, title, tags, summary, body_sections, today=today
@@ -227,6 +228,11 @@ def create_entry(
         existing = index.lookup(slug)
         raise SlugCollisionError(
             f"Slug '{slug}' already exists (used by '{existing.title}')."
+        )
+    # Within a batch, an earlier create in the same proposal claims its slug too.
+    if extra_slugs and slug in extra_slugs:
+        raise SlugCollisionError(
+            f"Slug '{slug}' is already created earlier in this batch."
         )
     path = _path_for(Path(content_root), entry_type, slug)
     return CreatedEntry(slug=slug, path=path, content=content)
@@ -268,11 +274,12 @@ def append_to_entry(
     section_heading: str,
     content: str,
     today: str | None = None,
+    current_content: str | None = None,
 ) -> AppendResult:
     entry = index.lookup(slug)
     if entry is None:
         raise EntryError(f"No entry with slug '{slug}'.")
-    original = entry.path.read_text(encoding="utf-8")
+    original = current_content if current_content is not None else entry.path.read_text(encoding="utf-8")
     fm_text, body = split_document(original)
     addition = content.strip()
 
@@ -334,6 +341,7 @@ def update_field(
     field: str,
     value,
     today: str | None = None,
+    current_content: str | None = None,
 ) -> UpdateResult:
     entry = index.lookup(slug)
     if entry is None:
@@ -352,7 +360,7 @@ def update_field(
                 f"Must be one of: {', '.join(sorted(ENUMS[field]))}."
             )
 
-    original = entry.path.read_text(encoding="utf-8")
+    original = current_content if current_content is not None else entry.path.read_text(encoding="utf-8")
     post = frontmatter.loads(original)
     old_value = post.metadata.get(field)
 

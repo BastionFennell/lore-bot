@@ -4,17 +4,20 @@ Takes an :class:`EngineContext` (message text, author, recent messages, a
 history-fetch callback, optional pending state + correction) and returns exactly
 one :class:`Outcome` dataclass:
 
-  * ProposedWrite  — Claude requested a write tool; the call is captured, NOT
-                     executed. The confirmation layer takes over.
+  * ProposedWrite  — Claude requested one or more write tools; the calls are
+                     captured (in content order), NOT executed. The confirmation
+                     layer takes over.
   * Clarification  — Claude called request_clarification.
   * Conversational — no_action, or plain end_turn text (an /ask answer, chit-chat).
-  * Error          — refusal, API error, or iteration cap.
+  * Error          — refusal, API error, iteration cap, or a batch over the cap.
 
 Read tools (fetch_channel_history, query_lore, search_lore) are executed inline;
-their results are fed back and the loop continues. If Claude requests a write
-tool alongside other calls in one response, the write is taken and the rest are
-ignored (logged). ``fetch_channel_history`` is server-clamped to 50 regardless
-of what the model asks for.
+their results are fed back and the loop continues. If Claude requests write
+tools alongside other calls in one response, ALL the write calls are captured
+and the rest are ignored (logged) — writes win over control tools. A single
+turn may batch several writes (e.g. "add these five glossary terms"); the batch
+is capped at :data:`MAX_WRITE_OPS`. ``fetch_channel_history`` is server-clamped
+to 50 regardless of what the model asks for.
 """
 
 from __future__ import annotations
@@ -33,6 +36,9 @@ log = logging.getLogger("lorebot.engine")
 
 HISTORY_HARD_CAP = 50
 MAX_ITERATIONS = 8
+# A single proposal may batch several write ops; beyond this we refuse and ask
+# the user to split the request (keeps previews/commits sane).
+MAX_WRITE_OPS = 20
 
 
 # --- Context & outcomes -----------------------------------------------------
@@ -49,7 +55,7 @@ class EngineContext:
 
 @dataclass
 class ProposedWrite:
-    operation: dict  # {"tool": ..., "input": ...}
+    operations: list[dict]  # [{"tool": ..., "input": ...}, ...], in content order
 
 
 @dataclass
@@ -257,12 +263,21 @@ def run_engine(
         if stop == "tool_use":
             tool_uses = _collect_tool_uses(content)
 
-            # Write tool takes priority; ignore any others in the same turn.
-            write = next((t for t in tool_uses if t["name"] in llm.WRITE_TOOLS), None)
-            if write is not None:
-                if len(tool_uses) > 1:
-                    log.info("multiple tool calls; taking write %s, ignoring rest", write["name"])
-                return ProposedWrite({"tool": write["name"], "input": write["input"]})
+            # Write tools take priority over control; capture ALL of them in
+            # content order (a batch), ignoring any non-write calls in the turn.
+            writes = [t for t in tool_uses if t["name"] in llm.WRITE_TOOLS]
+            if writes:
+                ignored = len(tool_uses) - len(writes)
+                if ignored:
+                    log.info("taking %d write call(s), ignoring %d other call(s)",
+                             len(writes), ignored)
+                if len(writes) > MAX_WRITE_OPS:
+                    return Error(
+                        f"That's {len(writes)} changes in one go — I cap batches at "
+                        f"{MAX_WRITE_OPS}. Please split the request into smaller messages."
+                    )
+                operations = [{"tool": w["name"], "input": w["input"]} for w in writes]
+                return ProposedWrite(operations)
 
             control = next((t for t in tool_uses if t["name"] in llm.CONTROL_TOOLS), None)
             if control is not None:
