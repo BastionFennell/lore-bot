@@ -4,11 +4,11 @@ The binding requirement is byte-identical output to urls.mjs. We verify that
 directly by shelling out to Node running the *real* urls.mjs (skipped if Node is
 absent), then pin the documented edge-case outputs.
 
-Note: two existing slugs — ``kells-hollow`` (title "Kell's Hollow") and
-``shattered-reach-map`` (title "Chart of the Shattered Reach") — were
-hand-authored and do NOT derive from ``slugify(title)``; urls.mjs itself would
-produce ``kell-s-hollow`` / ``chart-of-the-shattered-reach``. That is the actual
-behavior, so the bot reproduces it.
+Note: one existing slug — ``shattered-reach-map`` (title "Chart of the
+Shattered Reach") — was hand-authored and does NOT derive from
+``slugify(title)``; urls.mjs itself would produce
+``chart-of-the-shattered-reach``. That is the actual behavior, so the bot
+reproduces it.
 """
 
 from __future__ import annotations
@@ -24,10 +24,11 @@ from tests.conftest import REAL_REPO
 
 URLS_MJS = REAL_REPO / "site" / "src" / "lib" / "urls.mjs"
 
-HAND_AUTHORED_EXCEPTIONS = {"kells-hollow", "shattered-reach-map"}
+HAND_AUTHORED_EXCEPTIONS = {"shattered-reach-map"}
 
 EDGE_INPUTS = [
     "Kell's Hollow",
+    "The Siren’s Wake",
     "Café Málaga",
     "multiple   spaces",
     "--edgy--",
@@ -65,7 +66,8 @@ def test_parity_with_urls_mjs(index):
 
 
 def test_documented_edge_cases():
-    assert slugify("Kell's Hollow") == "kell-s-hollow"
+    assert slugify("Kell's Hollow") == "kells-hollow"
+    assert slugify("The Siren’s Wake") == "the-sirens-wake"
     assert slugify("Café Málaga") == "caf-m-laga"
     assert slugify("multiple   spaces") == "multiple-spaces"
     assert slugify("--edgy--") == "edgy"

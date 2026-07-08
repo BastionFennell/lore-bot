@@ -32,6 +32,7 @@ export function slugify(s) {
   return String(s)
     .toLowerCase()
     .trim()
+    .replace(/['’]/g, '') // drop apostrophes: "Kell's Hollow" -> "kells-hollow"
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
