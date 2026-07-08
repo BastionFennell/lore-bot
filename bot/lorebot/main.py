@@ -20,7 +20,7 @@ from . import gitops, llm, preview
 from .config import Config, ConfigError, load_config
 from .content import entries as entries_mod
 from .content.index import ContentIndex
-from .discord_io import CANCEL_EMOJI, CONFIRM_EMOJI, split_message
+from .discord_io import CANCEL_EMOJI, CONFIRM_EMOJI, SeenMessages, split_message
 from .pending import (
     AWAITING_CLARIFICATION,
     AWAITING_CONFIRMATION,
@@ -41,6 +41,8 @@ class LoreBot(discord.Client):
         self.config = config
         self.store = PendingStore(str(config.sqlite_path))
         self.llm_client = llm.build_client(config.anthropic_api_key)
+        # Guard against gateway event redelivery processing a message twice.
+        self._seen_messages = SeenMessages(maxlen=500)
 
     # --- lifecycle ---------------------------------------------------------
     async def on_ready(self):
@@ -60,6 +62,10 @@ class LoreBot(discord.Client):
     # --- messages ----------------------------------------------------------
     async def on_message(self, message: discord.Message):
         if not self._allowed(message):
+            return
+        # Idempotency: the gateway can redeliver an event; process each id once.
+        if not self._seen_messages.add(message.id):
+            log.info("skipping already-processed message %s", message.id)
             return
         user_id = str(message.author.id)
         pending = self.store.get(user_id)
@@ -119,6 +125,9 @@ class LoreBot(discord.Client):
             )
             if preview_msg:
                 await preview_msg.add_reaction(CONFIRM_EMOJI)
+                # Discord's add-reaction bucket is ~1/250ms; pacing the second
+                # reaction avoids a 429 (and the noisy rate-limit warning).
+                await asyncio.sleep(0.3)
                 await preview_msg.add_reaction(CANCEL_EMOJI)
         elif isinstance(outcome, engine_mod.Clarification):
             text = outcome.question
