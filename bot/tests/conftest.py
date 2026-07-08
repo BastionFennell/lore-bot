@@ -1,5 +1,10 @@
-"""Shared fixtures. Every content/git test runs against a *tmp copy* of the real
-``/content`` tree inside a throwaway git repo — nothing touches the real repo.
+"""Shared fixtures. Every content/git test runs against a *tmp copy* of the
+committed test corpus (``tests/fixtures/content``) inside a throwaway git repo —
+nothing touches the real repo's ``/content`` or git state.
+
+``REAL_REPO`` still points at the real repository root; it is used only to locate
+*code* that is not content — e.g. ``site/src/lib/urls.mjs`` for the slug parity
+test.
 """
 
 from __future__ import annotations
@@ -13,7 +18,8 @@ import pytest
 from lorebot.content.index import ContentIndex
 
 REAL_REPO = Path(__file__).resolve().parents[2]
-REAL_CONTENT = REAL_REPO / "content"
+# The permanent test corpus — a snapshot of /content, decoupled from live lore.
+FIXTURE_CONTENT = Path(__file__).resolve().parent / "fixtures" / "content"
 
 
 def git(repo: Path, *args: str) -> subprocess.CompletedProcess:
@@ -34,7 +40,7 @@ def _init_repo(repo: Path) -> None:
 def content_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     repo.mkdir()
-    shutil.copytree(REAL_CONTENT, repo / "content")
+    shutil.copytree(FIXTURE_CONTENT, repo / "content")
     _init_repo(repo)
     return repo
 
