@@ -237,7 +237,7 @@ class LoreBot(discord.Client):
         emoji = str(payload.emoji)
         channel = self.get_channel(payload.channel_id)
         if emoji == CONFIRM_EMOJI:
-            await self._commit(channel, pending, payload.user_id)
+            await self._commit(channel, pending, payload.user_id, member=payload.member)
         elif emoji == CANCEL_EMOJI:
             # Cancel just this item; any siblings in the batch keep waiting.
             self.store.clear_item(preview_message_id=str(payload.message_id))
@@ -245,11 +245,15 @@ class LoreBot(discord.Client):
                 channel, f"❌ Cancelled {self._item_label(pending)} — nothing was committed."
             )
 
-    async def _commit(self, channel, pending, user_id):
-        username = "unknown"
-        member = channel.guild.get_member(int(user_id)) if channel.guild else None
+    async def _commit(self, channel, pending, user_id, member=None):
+        # The raw reaction payload carries the member for guild reactions; the
+        # member cache is usually empty (no members intent), so prefer payload.
+        member = member or (channel.guild.get_member(int(user_id)) if channel.guild else None)
         if member:
             username = member.name
+        else:
+            user = self.get_user(int(user_id))
+            username = user.name if user else f"user-{user_id}"
         loop = asyncio.get_running_loop()
         try:
             result = await loop.run_in_executor(
