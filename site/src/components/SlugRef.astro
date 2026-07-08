@@ -1,0 +1,19 @@
+---
+// Renders a frontmatter slug reference (affiliation, leader, region, map, …) as
+// a link via the build-time slug index. Unknown slugs fall back to a stub.
+import { lookupSlug } from '../lib/lore-index.mjs';
+
+interface Props {
+  slug?: string;
+}
+const { slug } = Astro.props;
+const entry = slug ? lookupSlug(slug) : null;
+const stubText = `{{${slug}}}`;
+---
+{
+  entry ? (
+    <a class="lore-link" href={entry.url}>{entry.title}</a>
+  ) : (
+    <span class="stub-link" title="unknown entry">{stubText}</span>
+  )
+}

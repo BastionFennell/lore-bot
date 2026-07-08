@@ -1,0 +1,55 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { urlForType, tagUrl } from '../../lib/urls.mjs';
+
+const entries = await getCollection('lore');
+
+const groups = [
+  ['location', 'Locations'],
+  ['faction', 'Factions'],
+  ['npc', 'NPCs'],
+  ['concept', 'Concepts'],
+];
+
+const byType = (type) =>
+  entries
+    .filter((e) => e.data.type === type)
+    .sort((a, b) => a.data.title.localeCompare(b.data.title));
+
+const allTags = [...new Set(entries.flatMap((e) => e.data.tags))].sort();
+---
+
+<Base title="Lore" summary="The lore book of the Sundered Isles.">
+  <h1>Lore Book</h1>
+  <p class="page-summary">Browse the archive by type, or filter by tag.</p>
+
+  {allTags.length > 0 && (
+    <ul class="tag-list">
+      {allTags.map((t) => (
+        <li><a href={tagUrl(t)}>#{t}</a></li>
+      ))}
+    </ul>
+  )}
+
+  {groups.map(([type, label]) => {
+    const items = byType(type);
+    return (
+      items.length > 0 && (
+        <section>
+          <h2>{label}</h2>
+          <ul class="card-list">
+            {items.map((e) => (
+              <li>
+                <div class="title">
+                  <a href={urlForType(e.data.type, e.id)}>{e.data.title}</a>
+                </div>
+                <div class="summary">{e.data.summary}</div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    );
+  })}
+</Base>

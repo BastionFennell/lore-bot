@@ -1,0 +1,43 @@
+---
+import '../styles/global.css';
+import { withBase } from '../lib/urls.mjs';
+
+interface Props {
+  title: string;
+  summary?: string;
+}
+const { title, summary } = Astro.props;
+const nav = [
+  ['Lore', withBase('lore/')],
+  ['Characters', withBase('characters/')],
+  ['Maps', withBase('maps/')],
+  ['Glossary', withBase('glossary/')],
+  ['Timeline', withBase('timeline/')],
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · Sundered Isles Chronicle</title>
+    {summary && <meta name="description" content={summary} />}
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="inner">
+        <a class="brand" href={withBase('')}>Sundered Isles Chronicle</a>
+        <nav class="site-nav">
+          {nav.map(([label, href]) => <a href={href}>{label}</a>)}
+        </nav>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site-footer">
+      An archive of the Sundered Isles &mdash; source of truth lives in git.
+    </footer>
+  </body>
+</html>

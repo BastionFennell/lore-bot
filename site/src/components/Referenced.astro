@@ -1,0 +1,24 @@
+---
+// "Referenced by" backlinks block. Renders nothing when there are no referrers.
+import { backlinksFor } from '../lib/backlinks';
+
+interface Props {
+  slug: string;
+}
+const { slug } = Astro.props;
+const referrers = await backlinksFor(slug);
+---
+{
+  referrers.length > 0 && (
+    <section class="backlinks">
+      <h2>Referenced by</h2>
+      <ul>
+        {referrers.map((r) => (
+          <li>
+            <a href={r.url}>{r.title}</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}

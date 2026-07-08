@@ -1,0 +1,55 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import { urlForType, withBase } from '../lib/urls.mjs';
+
+const [lore, characters, maps] = await Promise.all([
+  getCollection('lore'),
+  getCollection('characters'),
+  getCollection('maps'),
+]);
+
+const recent = [...lore, ...characters, ...maps]
+  .sort((a, b) => new Date(b.data.updated) - new Date(a.data.updated))
+  .slice(0, 6);
+
+const iso = (d) => new Date(d).toISOString().slice(0, 10);
+
+const sections = [
+  ['Lore Book', 'lore/', 'Locations, factions, NPCs and the concepts of the world.'],
+  ['Characters', 'characters/', 'The player characters sailing the Reach.'],
+  ['Maps', 'maps/', 'Charts of the broken archipelago.'],
+  ['Glossary', 'glossary/', 'Terms of art and iron-sworn vocabulary.'],
+  ['Timeline', 'timeline/', 'The chronicle in in-fiction order.'],
+];
+---
+
+<Base title="Home" summary="A living archive of the Sundered Isles campaign.">
+  <h1>Sundered Isles Chronicle</h1>
+  <p class="page-summary">
+    A living archive for our play-by-post voyage through the Shattered Reach.
+    Everything here is plain markdown in git &mdash; the site is just the reading
+    surface.
+  </p>
+
+  <ul class="card-list">
+    {sections.map(([title, path, blurb]) => (
+      <li>
+        <div class="title"><a href={withBase(path)}>{title}</a></div>
+        <div class="summary">{blurb}</div>
+      </li>
+    ))}
+  </ul>
+
+  <h2>Recently updated</h2>
+  <ul class="card-list">
+    {recent.map((e) => (
+      <li>
+        <div class="title">
+          <a href={urlForType(e.data.type, e.id)}>{e.data.title}</a>
+        </div>
+        <div class="summary">{iso(e.data.updated)} &mdash; {e.data.summary}</div>
+      </li>
+    ))}
+  </ul>
+</Base>

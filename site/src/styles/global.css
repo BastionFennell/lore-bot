@@ -1,0 +1,292 @@
+:root {
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --text: #1d1b16;
+  --muted: #6b6559;
+  --border: #e4ded2;
+  --accent: #8a5a2b;
+  --accent-soft: #f0e6d6;
+  --link: #7a4a1e;
+  --stub: #a08e70;
+  --max: 52rem;
+
+  --badge-alive: #2f7d4f;
+  --badge-dead: #9a3b3b;
+  --badge-missing: #b07d1e;
+  --badge-unknown: #6b6559;
+  --badge-ally: #2f7d4f;
+  --badge-neutral: #6b6559;
+  --badge-hostile: #9a3b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16140f;
+    --surface: #1f1c15;
+    --text: #ece6d8;
+    --muted: #a49c8a;
+    --border: #34302650;
+    --accent: #d6a25f;
+    --accent-soft: #2a2418;
+    --link: #e0b678;
+    --stub: #97896b;
+
+    --badge-alive: #58b57f;
+    --badge-dead: #d97070;
+    --badge-missing: #e0b45a;
+    --badge-unknown: #a49c8a;
+    --badge-ally: #58b57f;
+    --badge-neutral: #a49c8a;
+    --badge-hostile: #d97070;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 17px;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--link);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.site-header .inner {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1.25rem;
+}
+.brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--text);
+  text-decoration: none;
+  margin-right: auto;
+}
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.95rem;
+}
+
+main {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.site-footer {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  font-family: 'Iowan Old Style', Georgia, serif;
+}
+h1 {
+  font-size: 2rem;
+  margin: 0 0 0.25rem;
+}
+.page-summary {
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 0;
+}
+
+/* Badges -------------------------------------------------------------- */
+.badge {
+  display: inline-block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  color: #fff;
+  vertical-align: middle;
+}
+.badge-alive { background: var(--badge-alive); }
+.badge-dead { background: var(--badge-dead); }
+.badge-missing { background: var(--badge-missing); }
+.badge-unknown { background: var(--badge-unknown); }
+.badge-ally { background: var(--badge-ally); }
+.badge-neutral { background: var(--badge-neutral); }
+.badge-hostile { background: var(--badge-hostile); }
+
+/* Metadata table ------------------------------------------------------ */
+.meta {
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 1.25rem 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+}
+.meta dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+.meta dd {
+  margin: 0;
+}
+
+/* Tags ---------------------------------------------------------------- */
+.tag-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-family: system-ui, sans-serif;
+}
+.tag-list a {
+  display: inline-block;
+  font-size: 0.8rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* Prose {{slug}} links ------------------------------------------------ */
+.lore-link {
+  font-variant: small-caps;
+}
+.stub-link {
+  color: var(--stub);
+  border-bottom: 1px dashed var(--stub);
+  cursor: help;
+}
+
+/* Referenced-by ------------------------------------------------------- */
+.backlinks {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.backlinks h2 {
+  font-size: 1.1rem;
+  font-family: system-ui, sans-serif;
+}
+
+/* Cards / index lists ------------------------------------------------- */
+.card-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 2rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.card-list li {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+}
+.card-list .title {
+  font-weight: 700;
+}
+.card-list .summary {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+/* Map image ----------------------------------------------------------- */
+.map-image {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: block;
+  margin: 1.25rem 0;
+}
+
+/* Glossary ------------------------------------------------------------ */
+.glossary dt {
+  font-weight: 700;
+  margin-top: 1.25rem;
+  scroll-margin-top: 1rem;
+}
+.glossary dd {
+  margin: 0.15rem 0 0;
+}
+
+/* Timeline ------------------------------------------------------------ */
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0;
+  border-left: 2px solid var(--border);
+}
+.timeline li {
+  position: relative;
+  padding: 0 0 1.75rem 1.5rem;
+}
+.timeline li::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 0.35rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.timeline .when {
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.related {
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.overflow-x {
+  overflow-x: auto;
+}

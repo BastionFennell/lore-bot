@@ -1,0 +1,58 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import Referenced from '../../components/Referenced.astro';
+import { tagUrl } from '../../lib/urls.mjs';
+
+// v1 renders a plain responsive <img>; a pan/zoom viewer is a fast follow (spec).
+export async function getStaticPaths() {
+  const entries = await getCollection('maps');
+  return entries.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { data } = entry;
+const { Content } = await render(entry);
+const iso = (d) => new Date(d).toISOString().slice(0, 10);
+const imgSrc = data.image?.src ?? null;
+---
+
+<Base title={data.title} summary={data.summary}>
+  <article>
+    <p class="related">Map</p>
+    <h1>{data.title}</h1>
+    <p class="page-summary">{data.summary}</p>
+
+    {imgSrc && (
+      <div class="overflow-x">
+        <img
+          class="map-image"
+          src={imgSrc}
+          width={data.image.width}
+          height={data.image.height}
+          alt={data.title}
+        />
+      </div>
+    )}
+
+    <dl class="meta">
+      <dt>Updated</dt>
+      <dd>{iso(data.updated)}</dd>
+    </dl>
+
+    {data.tags.length > 0 && (
+      <ul class="tag-list">
+        {data.tags.map((t) => (
+          <li><a href={tagUrl(t)}>#{t}</a></li>
+        ))}
+      </ul>
+    )}
+
+    <Content />
+
+    <Referenced slug={entry.id} />
+  </article>
+</Base>

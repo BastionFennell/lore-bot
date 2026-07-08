@@ -1,0 +1,106 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import SlugRef from '../../components/SlugRef.astro';
+import Referenced from '../../components/Referenced.astro';
+import { tagUrl } from '../../lib/urls.mjs';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('lore');
+  return entries.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { data } = entry;
+const { Content } = await render(entry);
+const iso = (d) => new Date(d).toISOString().slice(0, 10);
+
+const typeLabel = {
+  location: 'Location',
+  faction: 'Faction',
+  npc: 'NPC',
+  concept: 'Concept',
+}[data.type];
+---
+
+<Base title={data.title} summary={data.summary}>
+  <article>
+    <p class="related">{typeLabel}</p>
+    <h1>
+      {data.title}
+      {data.type === 'npc' && (
+        <span class={`badge badge-${data.status}`}>{data.status}</span>
+      )}
+      {data.type === 'faction' && (
+        <span class={`badge badge-${data.disposition}`}>{data.disposition}</span>
+      )}
+    </h1>
+    <p class="page-summary">{data.summary}</p>
+
+    <dl class="meta">
+      {data.type === 'npc' && (
+        <>
+          <dt>Status</dt>
+          <dd>{data.status}</dd>
+          {data.affiliation && (
+            <>
+              <dt>Affiliation</dt>
+              <dd><SlugRef slug={data.affiliation} /></dd>
+            </>
+          )}
+          {data.first_appearance && (
+            <>
+              <dt>First appearance</dt>
+              <dd>{data.first_appearance}</dd>
+            </>
+          )}
+        </>
+      )}
+      {data.type === 'faction' && (
+        <>
+          <dt>Disposition</dt>
+          <dd>{data.disposition}</dd>
+          {data.leader && (
+            <>
+              <dt>Leader</dt>
+              <dd><SlugRef slug={data.leader} /></dd>
+            </>
+          )}
+        </>
+      )}
+      {data.type === 'location' && (
+        <>
+          {data.region && (
+            <>
+              <dt>Region</dt>
+              <dd><SlugRef slug={data.region} /></dd>
+            </>
+          )}
+          {data.map && (
+            <>
+              <dt>Map</dt>
+              <dd><SlugRef slug={data.map} /></dd>
+            </>
+          )}
+        </>
+      )}
+      <dt>Updated</dt>
+      <dd>{iso(data.updated)}</dd>
+    </dl>
+
+    {data.tags.length > 0 && (
+      <ul class="tag-list">
+        {data.tags.map((t) => (
+          <li><a href={tagUrl(t)}>#{t}</a></li>
+        ))}
+      </ul>
+    )}
+
+    <Content />
+
+    <Referenced slug={entry.id} />
+  </article>
+</Base>

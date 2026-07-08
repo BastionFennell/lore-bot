@@ -1,0 +1,45 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import { lookupSlug } from '../lib/lore-index.mjs';
+
+// Convention: `date` is a sortable in-fiction date string (e.g. 0847-03-12).
+// Events are ordered by that string ascending; `display_date` is the human form.
+const events = (await getCollection('timeline')).sort((a, b) =>
+  a.data.date.localeCompare(b.data.date)
+);
+---
+
+<Base title="Timeline" summary="A chronicle of the Sundered Isles, in-fiction order.">
+  <h1>Timeline</h1>
+  <p class="page-summary">
+    Ordered by in-fiction date. Dates use a sortable form
+    (<code>0847-03-12</code>); the label shows the human reading.
+  </p>
+  <ol class="timeline">
+    {events.map((e) => (
+      <li>
+        <div class="when">{e.data.display_date ?? e.data.date}</div>
+        <p>{e.data.description}</p>
+        {e.data.related.length > 0 && (
+          <p class="related">
+            Related:{' '}
+            {e.data.related.map((slug, i) => {
+              const target = lookupSlug(slug);
+              return (
+                <>
+                  {i > 0 && ', '}
+                  {target ? (
+                    <a href={target.url}>{target.title}</a>
+                  ) : (
+                    <span class="stub-link" title="unknown entry">{`{{${slug}}}`}</span>
+                  )}
+                </>
+              );
+            })}
+          </p>
+        )}
+      </li>
+    ))}
+  </ol>
+</Base>

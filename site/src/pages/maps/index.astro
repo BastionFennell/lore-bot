@@ -1,0 +1,23 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { urlForType } from '../../lib/urls.mjs';
+
+const entries = (await getCollection('maps')).sort((a, b) =>
+  a.data.title.localeCompare(b.data.title)
+);
+---
+
+<Base title="Maps" summary="Charts of the Sundered Isles.">
+  <h1>Maps</h1>
+  <ul class="card-list">
+    {entries.map((e) => (
+      <li>
+        <div class="title">
+          <a href={urlForType('map', e.id)}>{e.data.title}</a>
+        </div>
+        <div class="summary">{e.data.summary}</div>
+      </li>
+    ))}
+  </ul>
+</Base>

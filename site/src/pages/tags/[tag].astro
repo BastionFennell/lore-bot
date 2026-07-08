@@ -1,0 +1,49 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { urlForType, tagUrl, slugify } from '../../lib/urls.mjs';
+
+export async function getStaticPaths() {
+  const [lore, characters, maps] = await Promise.all([
+    getCollection('lore'),
+    getCollection('characters'),
+    getCollection('maps'),
+  ]);
+  const entries = [...lore, ...characters, ...maps];
+  const tags = new Map(); // slugified -> original label
+  for (const e of entries) {
+    for (const t of e.data.tags) tags.set(slugify(t), t);
+  }
+  return [...tags.entries()].map(([slug, label]) => ({
+    params: { tag: slug },
+    props: { label },
+  }));
+}
+
+const { label } = Astro.props;
+const { tag } = Astro.params;
+
+const [lore, characters, maps] = await Promise.all([
+  getCollection('lore'),
+  getCollection('characters'),
+  getCollection('maps'),
+]);
+const entries = [...lore, ...characters, ...maps]
+  .filter((e) => e.data.tags.some((t) => slugify(t) === tag))
+  .sort((a, b) => a.data.title.localeCompare(b.data.title));
+---
+
+<Base title={`#${label}`} summary={`Entries tagged ${label}.`}>
+  <p class="related"><a href={tagUrl(label)}>tag</a></p>
+  <h1>#{label}</h1>
+  <ul class="card-list">
+    {entries.map((e) => (
+      <li>
+        <div class="title">
+          <a href={urlForType(e.data.type, e.id)}>{e.data.title}</a>
+        </div>
+        <div class="summary">{e.data.summary}</div>
+      </li>
+    ))}
+  </ul>
+</Base>
