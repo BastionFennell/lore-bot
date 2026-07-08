@@ -107,6 +107,46 @@ push) or `❌` to cancel. A correction reply ("put it under Recent History
 instead") re-runs the parse and shows a revised preview. Pending operations
 expire after 30 minutes.
 
+## RP harvest
+
+Play-by-post RP lives in Discord **threads/channels the bot normally never reads**.
+On an explicit command in `#captains-log` — and only then — the bot reads the
+configured RP source(s) since its last harvest, runs the transcript through the
+engine, and proposes lore operations (new entries, glossary terms, timeline
+events, and ripple updates to existing pages) through the **same** per-item
+preview / `✅` / `❌` flow. It never reads RP channels ambiently.
+
+Commands (case-insensitive, exact match, surrounding whitespace allowed):
+
+- `harvest` — read each configured source since its high-water mark.
+- `harvest from start` — reset the marks and re-read everything.
+
+The mark advances whenever a harvest **runs** (not on confirm), so `harvest` is
+predictably incremental and `harvest from start` is the redo lever. Harvesting is
+refused while you have pending previews (resolve or `cancel all` first). Each run
+is capped at 400 messages per source; a capped run says it was **partial** and
+running `harvest` again continues from where it stopped. Designed for low-volume
+play-by-post.
+
+### Config
+
+Set `RP_SOURCE_IDS` to a comma-separated list of channel/thread IDs (right-click
+a thread → **Copy ID**; threads *are* channels in the Discord API). Blank/unset
+disables harvesting with a helpful message.
+
+```bash
+RP_SOURCE_IDS=123456789012345678,234567890123456789
+```
+
+### Discord permissions
+
+The bot needs **View Channel** and **Read Message History** on each RP source —
+and, for a **thread**, on the thread's **parent channel** (thread permissions are
+inherited from the parent). Threads are frequently not in the gateway cache, so
+the bot resolves each source via `get_channel(id)` and falls back to
+`fetch_channel(id)`. Add the bot to the relevant channel(s) and **restart** it
+after changing `RP_SOURCE_IDS` (env is read at startup).
+
 ## REPL mode (no Discord)
 
 The REPL drives the same engine with `y/n` confirmation — handy for iterating on

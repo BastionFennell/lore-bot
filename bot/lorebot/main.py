@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+from datetime import datetime, timezone
 
 import discord
 from discord.ext import tasks
@@ -21,7 +22,7 @@ REACTION_PACE = 0.3  # between the ✅ and ❌ on one message
 MESSAGE_PACE = 0.5  # between consecutive preview messages / reaction groups
 
 from . import engine as engine_mod
-from . import gitops, llm, preview, refrender, siteurls
+from . import gitops, harvest as harvest_mod, llm, preview, refrender, siteurls
 from .config import Config, ConfigError, load_config
 from .content import entries as entries_mod
 from .content.index import ContentIndex
@@ -36,6 +37,11 @@ log = logging.getLogger("lorebot.main")
 
 PENDING_TTL_SECONDS = 30 * 60
 
+# Exact (case-insensitive, whitespace-trimmed) commands. Anything else flows to the
+# engine as usual.
+HARVEST_COMMAND = "harvest"
+HARVEST_FROM_START_COMMAND = "harvest from start"
+
 
 class LoreBot(discord.Client):
     def __init__(self, config: Config):
@@ -45,6 +51,7 @@ class LoreBot(discord.Client):
         super().__init__(intents=intents)
         self.config = config
         self.store = PendingStore(str(config.sqlite_path))
+        self.marks = harvest_mod.HarvestMarks(str(config.sqlite_path))
         self.llm_client = llm.build_client(config.anthropic_api_key)
         # Guard against gateway event redelivery processing a message twice.
         self._seen_messages = SeenMessages(maxlen=500)
@@ -85,6 +92,22 @@ class LoreBot(discord.Client):
                 message.channel,
                 f"❌ Cancelled all {n} pending item{'s' if n != 1 else ''} — nothing was committed.",
             )
+            return
+
+        # Explicit RP-harvest commands (deterministic, like "cancel all").
+        norm = message.content.strip().lower()
+        if norm in (HARVEST_COMMAND, HARVEST_FROM_START_COMMAND):
+            if items:
+                # Harvest results would tangle with outstanding items — refuse.
+                labels = ", ".join(self._item_label(i) for i in items)
+                n = len(items)
+                await self._send(
+                    message.channel,
+                    f"You have {n} pending item{'s' if n != 1 else ''} ({labels}) — "
+                    "resolve or 'cancel all' before harvesting.",
+                )
+                return
+            await self._harvest(message, from_start=(norm == HARVEST_FROM_START_COMMAND))
             return
 
         if clarification is not None:
@@ -230,6 +253,117 @@ class LoreBot(discord.Client):
             or data.get("date_in_fiction")
             or "item"
         )
+
+    # --- harvest -----------------------------------------------------------
+    async def _harvest(self, message: discord.Message, *, from_start: bool):
+        """Read the configured RP source(s) since each one's mark, run each transcript
+        through the engine, and dispatch the outcome through the normal preview flow."""
+        sources = self.config.rp_source_ids
+        if not sources:
+            await self._send(
+                message.channel,
+                "RP harvest is disabled — set `RP_SOURCE_IDS` in the bot's env "
+                "(comma-separated channel/thread IDs) and restart to enable it.",
+            )
+            return
+        async with message.channel.typing():
+            for source_id in sources:
+                await self._harvest_one(message, source_id, from_start=from_start)
+
+    async def _harvest_one(self, message: discord.Message, source_id: int, *, from_start: bool):
+        sid = str(source_id)
+        try:
+            channel = self.get_channel(source_id) or await self.fetch_channel(source_id)
+        except discord.Forbidden:
+            await self._send(
+                message.channel,
+                f"⚠️ I can't read source `{sid}` — I need View Channel + Read Message "
+                "History on it (or its parent channel, for a thread).",
+            )
+            return
+        except (discord.NotFound, discord.HTTPException) as e:
+            await self._send(message.channel, f"⚠️ Couldn't open RP source `{sid}`: {e}")
+            return
+
+        label = getattr(channel, "name", None) or sid
+        if from_start:
+            self.marks.reset(sid)
+        mark = self.marks.get(sid)
+        after_id = mark.last_message_id if mark else None
+
+        try:
+            raw = await self._fetch_source(channel, after_id, harvest_mod.MAX_MESSAGES_PER_RUN)
+        except discord.Forbidden:
+            await self._send(
+                message.channel,
+                f"⚠️ I can't read message history in `{label}` — grant View Channel + "
+                "Read Message History on its parent channel.",
+            )
+            return
+
+        prepared = harvest_mod.prepare_harvest(raw)
+        if not raw:
+            since = (mark.harvested_at or "")[:10] if mark and mark.harvested_at else "the start"
+            await self._send(
+                message.channel, f"Nothing new to harvest since {since} ({label})."
+            )
+            return
+
+        # The mark advances when a harvest RUNS (to the newest FETCHED id), so a partial
+        # cap-limited run continues on the next `harvest`. `harvest from start` is the redo.
+        self.marks.advance(sid, prepared.new_mark, datetime.now(timezone.utc).isoformat())
+
+        if not prepared.transcript:
+            since = (mark.harvested_at or "")[:10] if mark and mark.harvested_at else "the start"
+            await self._send(
+                message.channel, f"Nothing new to harvest since {since} ({label})."
+            )
+            return
+
+        status = (
+            f"Harvesting {prepared.count} new message(s) from {label} "
+            f"({prepared.date_range})…"
+        )
+        if prepared.partial:
+            status += (
+                f"\n(Partial — hit the {harvest_mod.MAX_MESSAGES_PER_RUN}-message cap; "
+                "run `harvest` again to continue.)"
+            )
+        await self._send(message.channel, status)
+
+        index = ContentIndex(self.config.content_root)
+        loop = asyncio.get_running_loop()
+        outcome = await loop.run_in_executor(
+            None,
+            functools.partial(
+                harvest_mod.run_harvest,
+                client=self.llm_client,
+                model=self.config.anthropic_model,
+                index=index,
+                transcript=prepared.transcript,
+                author=message.author.display_name,
+                effort=self.config.anthropic_effort,
+            ),
+        )
+        await self._dispatch(message, index, outcome)
+
+    async def _fetch_source(self, channel, after_id, cap: int) -> list[dict]:
+        """Fetch up to ``cap`` messages after ``after_id`` (all if None), oldest-first,
+        as plain dicts for :func:`harvest.prepare_harvest`. Bots/empties are filtered
+        there, not here — the mark advances over them too."""
+        after = discord.Object(id=int(after_id)) if after_id else None
+        out: list[dict] = []
+        async for m in channel.history(limit=cap, after=after, oldest_first=True):
+            out.append(
+                {
+                    "id": str(m.id),
+                    "created_at": m.created_at,
+                    "author": m.author.display_name,
+                    "content": m.content or "",
+                    "is_bot": bool(m.author.bot),
+                }
+            )
+        return out
 
     # --- reactions ---------------------------------------------------------
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
