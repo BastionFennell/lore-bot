@@ -21,7 +21,7 @@ REACTION_PACE = 0.3  # between the ✅ and ❌ on one message
 MESSAGE_PACE = 0.5  # between consecutive preview messages / reaction groups
 
 from . import engine as engine_mod
-from . import gitops, llm, preview
+from . import gitops, llm, preview, siteurls
 from .config import Config, ConfigError, load_config
 from .content import entries as entries_mod
 from .content.index import ContentIndex
@@ -272,8 +272,17 @@ class LoreBot(discord.Client):
             return
         self.store.clear_item(row_id=pending.id)
         msg = f"{'✅' if result.ok else '⚠️'} {result.message}"
-        if result.commit_sha:
-            msg += f"\nCommit `{result.commit_sha[:8]}`."
+        if result.ok and result.committed:
+            urls = siteurls.page_urls(
+                self.config.site_base_url, self.config.content_root, pending.operations
+            )
+            if urls:
+                # <angle brackets> suppress Discord's link-preview embeds.
+                where = "\n".join(f"📖 <{u}>" for u in urls)
+                note = " (live after the deploy, ~1 min)" if result.pushed else ""
+                msg += f"\n{where}{note}"
+            elif result.commit_sha:
+                msg += f"\nCommit `{result.commit_sha[:8]}`."
         await self._send(channel, msg)
         if result.both_versions:
             for path, blob in result.both_versions.items():

@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 
 from . import engine as engine_mod
-from . import gitops, llm, preview
+from . import gitops, llm, preview, siteurls
 from .config import ConfigError, load_config
 from .content import entries as entries_mod
 from .content.index import ContentIndex
@@ -81,7 +81,11 @@ def main() -> None:
                         config.repo_path, config.content_root, [outcome.operations[k - 1]], "you"
                     )
                     print(("✅ " if result.ok else "⚠️  ") + result.message)
-                    if result.commit_sha:
+                    for u in siteurls.page_urls(
+                        config.site_base_url, config.content_root, [outcome.operations[k - 1]]
+                    ):
+                        print(f"📖 {u}")
+                    if result.commit_sha and not config.site_base_url:
                         print(f"Commit {result.commit_sha[:8]}")
                 else:
                     print("Skipped — nothing committed.")
