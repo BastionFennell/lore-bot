@@ -71,6 +71,43 @@ def test_batch_applies_in_one_commit(content_repo, content_root):
     assert "- timeline:" in body
 
 
+def test_per_item_apply_produces_independent_commits(content_repo, content_root):
+    # Each op confirmed on its own => one commit per op, terse per-op message.
+    for op in BATCH_OPS:
+        res = gitops.apply_operations(content_repo, content_root, [op], "you")
+        assert res.ok and res.committed
+    count = git(content_repo, "rev-list", "--count", "HEAD").stdout.strip()
+    assert count == "4"  # init + 3 independent commits
+    # each commit is a normal single-op message, not a batch subject
+    subjects = git(content_repo, "log", "--format=%s", "-3").stdout.splitlines()
+    assert all("changes via batch" not in s for s in subjects)
+    assert any("add kin" in s for s in subjects)
+    assert any("add fathoms" in s for s in subjects)
+    # all three changes landed
+    glossary = (content_root / "glossary" / "glossary.yaml").read_text()
+    assert "id: kin" in glossary and "id: fathoms" in glossary
+    assert "A battle at sea" in (content_root / "timeline" / "events.yaml").read_text()
+
+
+def test_apply_item_two_after_item_one_rebuilds_from_disk(content_repo, content_root):
+    # Two appends to the same section, applied one at a time. Item 2's plan must
+    # be rebuilt against the on-disk tree (which now contains item 1), so both
+    # lines survive rather than item 2 clobbering item 1.
+    op1 = {"tool": "append_to_entry",
+           "input": {"slug": "captain-powderkeg", "section_heading": "Recent History",
+                     "content": "First independent line."}}
+    op2 = {"tool": "append_to_entry",
+           "input": {"slug": "captain-powderkeg", "section_heading": "Recent History",
+                     "content": "Second independent line."}}
+    assert gitops.apply_operations(content_repo, content_root, [op1], "you").ok
+    assert gitops.apply_operations(content_repo, content_root, [op2], "you").ok
+    text = (content_root / "lore" / "npcs" / "captain-powderkeg.md").read_text()
+    assert "First independent line." in text
+    assert "Second independent line." in text
+    count = git(content_repo, "rev-list", "--count", "HEAD").stdout.strip()
+    assert count == "3"  # init + 2 commits
+
+
 def test_no_remote_local_commit(content_repo, content_root):
     res = gitops.apply_operations(content_repo, content_root, CREATE_OP, "you")
     assert res.ok and res.committed and res.no_remote
