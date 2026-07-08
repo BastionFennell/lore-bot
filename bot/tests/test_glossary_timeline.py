@@ -34,6 +34,17 @@ def test_update_glossary_term_replaces_not_duplicates(content_root):
     assert matches[0]["definition"] == "An updated definition of the binding oath."
 
 
+def test_glossary_ids_reads_disk_and_overlay(content_root):
+    # From disk: the committed fixture ids.
+    ids = glossary.glossary_ids(content_root)
+    assert {"iron-vow", "free-captain", "reach-mist"} <= ids
+    # From an overlay (a term added earlier in a batch, not yet on disk).
+    res = glossary.add_glossary_term(content_root, term="Blood Pact", definition="A grim oath.")
+    ids_overlay = glossary.glossary_ids(content_root, current_content=res.new_content)
+    assert "blood-pact" in ids_overlay
+    assert "iron-vow" in ids_overlay  # existing ids carried through
+
+
 def test_add_timeline_event(content_root):
     res = timeline.add_timeline_event(
         content_root,

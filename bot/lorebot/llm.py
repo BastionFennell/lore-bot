@@ -236,7 +236,12 @@ confidently resolve a target, call request_clarification.
 5. QUESTIONS (/ask): Use read tools (search_lore, query_lore) to gather relevant \
 entries, then answer conversationally with the slugs you cited. Do not call a write \
 tool for a question.
-6. Cross-links use {{slug}} syntax in body text. Prefer linking to existing slugs.
+6. CROSS-LINKS: Use {{ref}} syntax in body text and in glossary definitions / \
+timeline descriptions. A {{ref}} may point at an entry slug OR a glossary term \
+id; on a name collision the entry slug takes precedence. Prefer linking to refs \
+that already exist (entry slugs or glossary term ids in the content index). \
+Unknown refs are allowed as forward references — they don't block a write and \
+render as stub links on the site — so use them deliberately, not by accident.
 """
 
 

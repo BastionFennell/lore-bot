@@ -212,10 +212,16 @@ def _plan_one(
     tool = operation["tool"]
     data = operation.get("input", {}) or {}
 
+    # {{ref}}s matching a glossary term id are known (not warned). Read the id set
+    # from the batch overlay when a glossary op earlier in the same proposal has
+    # already added the term, otherwise from disk.
+    gpath = str(Path(content_root) / glossary.GLOSSARY_RELPATH)
+    known_glossary = glossary.glossary_ids(content_root, current_content=overlay.get(gpath))
+
     if tool == "create_entry":
-        return _plan_create(content_root, index, data, created_slugs)
+        return _plan_create(content_root, index, data, created_slugs, known_glossary)
     if tool == "append_to_entry":
-        return _plan_append(index, data, overlay)
+        return _plan_append(index, data, overlay, known_glossary)
     if tool == "update_field":
         return _plan_update(index, data, overlay)
     if tool == "add_glossary_term":
@@ -236,7 +242,11 @@ def _sections_to_dict(body_sections) -> dict[str, str]:
 
 
 def _plan_create(
-    content_root: Path, index: ContentIndex, data: dict, created_slugs: set[str]
+    content_root: Path,
+    index: ContentIndex,
+    data: dict,
+    created_slugs: set[str],
+    known_glossary: set[str] | None = None,
 ) -> OpPlan:
     sections = _sections_to_dict(data.get("body_sections"))
     created = entries.create_entry(
@@ -249,7 +259,9 @@ def _plan_create(
         body_sections=sections,
         extra_slugs=created_slugs,
     )
-    warnings = _slug_warnings(index, created.content, ignore={created.slug})
+    warnings = _slug_warnings(
+        index, created.content, ignore={created.slug}, known_glossary=known_glossary
+    )
     return OpPlan(
         kind="create_entry",
         verb="create",
@@ -261,7 +273,12 @@ def _plan_create(
     )
 
 
-def _plan_append(index: ContentIndex, data: dict, overlay: dict[str, str]) -> OpPlan:
+def _plan_append(
+    index: ContentIndex,
+    data: dict,
+    overlay: dict[str, str],
+    known_glossary: set[str] | None = None,
+) -> OpPlan:
     entry = index.lookup(data["slug"])
     current = overlay.get(str(entry.path)) if entry else None
     res = entries.append_to_entry(
@@ -271,7 +288,7 @@ def _plan_append(index: ContentIndex, data: dict, overlay: dict[str, str]) -> Op
         content=data["content"],
         current_content=current,
     )
-    warnings = _slug_warnings(index, data["content"])
+    warnings = _slug_warnings(index, data["content"], known_glossary=known_glossary)
     if res.created_heading:
         warnings.append(f'New section heading "## {res.heading}" will be created.')
     diff = _diff(res.old_section, res.new_section, f"{data['slug']} · ## {res.heading}")
@@ -362,8 +379,17 @@ def _plan_timeline(
     )
 
 
-def _slug_warnings(index: ContentIndex, text: str, *, ignore: set[str] | None = None) -> list[str]:
-    unknown = entries.unknown_slug_refs(index, text, ignore=ignore)
+def _slug_warnings(
+    index: ContentIndex,
+    text: str,
+    *,
+    ignore: set[str] | None = None,
+    known_glossary: set[str] | None = None,
+) -> list[str]:
+    # A ref that resolves to an entry slug OR a glossary term id is known; only
+    # the rest are flagged as stub-rendering forward references.
+    known = set(ignore or set()) | set(known_glossary or set())
+    unknown = entries.unknown_slug_refs(index, text, ignore=known)
     return [f"Unknown reference `{{{{{s}}}}}` (renders as a stub link)." for s in unknown]
 
 

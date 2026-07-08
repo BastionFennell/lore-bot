@@ -32,6 +32,28 @@ def _dump(items: list[dict]) -> str:
     return yaml.dump(items, sort_keys=False, allow_unicode=True, default_flow_style=False)
 
 
+def glossary_ids(content_root: Path, *, current_content: str | None = None) -> set[str]:
+    """Return the set of glossary term ids currently defined.
+
+    A ``{{ref}}`` may point at a glossary term id (a secondary namespace beside
+    entry slugs), so callers use this to treat such refs as *known* rather than
+    warning on them. Pass ``current_content`` to read a batch overlay (a term
+    added earlier in the same proposal, not yet written to disk) instead of the
+    file on disk.
+    """
+    path = Path(content_root) / GLOSSARY_RELPATH
+    if current_content is not None:
+        text = current_content
+    else:
+        text = path.read_text(encoding="utf-8") if path.exists() else ""
+    if not text:
+        return set()
+    items = yaml.safe_load(text) or []
+    if not isinstance(items, list):
+        return set()
+    return {i["id"] for i in items if isinstance(i, dict) and i.get("id")}
+
+
 def add_glossary_term(
     content_root: Path,
     *,
