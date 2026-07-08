@@ -9,3 +9,8 @@
     in exchange for fertilizing it, or a worker offering a Firekin precious wood in
     exchange for learning to make candlelight. Like Fathoms, Kin originate from the
     Apexes and will die if their originating Apex dies.
+- id: fathoms
+  term: Fathoms
+  definition: Powerful magical creatures. The scale is arbitrary and context-dependent,
+    ranging from sirens to sea serpents to the Kraken. Like Kin, Fathoms originate
+    from the Apexes and will die if their originating Apex dies.
