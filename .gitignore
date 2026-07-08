@@ -2,4 +2,10 @@ node_modules
 dist
 .astro
 .DS_Store
+bot/.env
 bot/*.sqlite
+bot/.venv
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
