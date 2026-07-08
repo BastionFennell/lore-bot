@@ -22,6 +22,7 @@ def base_env(monkeypatch):
         "REPO_PATH",
         "SITE_BASE_URL",
         "ANTHROPIC_MODEL",
+        "RP_SOURCE_IDS",
     ):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
@@ -44,6 +45,23 @@ def test_empty_site_base_url_is_none(base_env):
     base_env.setenv("SITE_BASE_URL", "")
     cfg = load_config(require_discord=False, dotenv=False)
     assert cfg.site_base_url is None
+
+
+def test_rp_source_ids_unset_is_empty(base_env):
+    cfg = load_config(require_discord=False, dotenv=False)
+    assert cfg.rp_source_ids == []
+
+
+def test_rp_source_ids_blank_is_empty(base_env):
+    base_env.setenv("RP_SOURCE_IDS", "")
+    cfg = load_config(require_discord=False, dotenv=False)
+    assert cfg.rp_source_ids == []
+
+
+def test_rp_source_ids_ordered_and_deduped(base_env):
+    base_env.setenv("RP_SOURCE_IDS", " 30, 10 ,20,10 ")
+    cfg = load_config(require_discord=False, dotenv=False)
+    assert cfg.rp_source_ids == [30, 10, 20]  # config order preserved, dupes dropped
 
 
 def test_bogus_repo_path_names_the_missing_content_dir(base_env, tmp_path):
