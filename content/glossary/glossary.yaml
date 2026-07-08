@@ -14,3 +14,10 @@
   definition: Powerful magical creatures. The scale is arbitrary and context-dependent,
     ranging from sirens to sea serpents to the Kraken. Like Kin, Fathoms originate
     from the Apexes and will die if their originating Apex dies.
+- id: apex
+  term: Apex
+  definition: Especially powerful magical creatures that each represent an entire
+    domain. Fathoms and Kin originate from the Apexes, and should an Apex die, its
+    Fathoms and Kin will die too. The Darkness that Dwells at the Bottom of the Ocean,
+    for example, represents an idea, an entity, and a whole class of related Fathoms
+    such as Ghost Whales or Shadow Rays.
