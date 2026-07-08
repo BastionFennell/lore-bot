@@ -1,0 +1,133 @@
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+
+from lorebot import gitops
+from tests.conftest import git
+
+
+def make_bare(tmp_path: Path) -> Path:
+    bare = tmp_path / "remote.git"
+    subprocess.run(
+        ["git", "init", "--bare", "-b", "main", str(bare)],
+        check=True, capture_output=True, text=True,
+    )
+    return bare
+
+
+def add_origin(repo: Path, bare: Path) -> None:
+    git(repo, "remote", "add", "origin", str(bare))
+    git(repo, "push", "-u", "origin", "main")
+
+
+def clone(bare: Path, dest: Path) -> Path:
+    subprocess.run(["git", "clone", str(bare), str(dest)], check=True, capture_output=True, text=True)
+    git(dest, "config", "user.email", "c2@example.com")
+    git(dest, "config", "user.name", "Clone2")
+    return dest
+
+
+CREATE_OP = {
+    "tool": "create_entry",
+    "input": {
+        "type": "location", "title": "Gull Reef", "tags": ["reef"],
+        "summary": "A treacherous reef.",
+        "body_sections": [{"heading": "Description", "content": "Sharp coral."}],
+    },
+}
+UPDATE_OP = {
+    "tool": "update_field",
+    "input": {"slug": "captain-powderkeg", "field": "status", "value": "dead"},
+}
+
+
+def test_no_remote_local_commit(content_repo, content_root):
+    res = gitops.apply_operation(content_repo, content_root, CREATE_OP, "you")
+    assert res.ok and res.committed and res.no_remote
+    assert (content_root / "lore" / "locations" / "gull-reef.md").exists()
+    log = git(content_repo, "log", "--oneline").stdout
+    assert "create gull-reef" in log
+    # attribution: author is LoreBot
+    author = git(content_repo, "log", "-1", "--format=%an <%ae>").stdout.strip()
+    assert author == "LoreBot <lorebot@sundered-isles.local>"
+
+
+def test_commit_push_happy(content_repo, content_root, tmp_path):
+    bare = make_bare(tmp_path)
+    add_origin(content_repo, bare)
+    res = gitops.apply_operation(content_repo, content_root, UPDATE_OP, "captainuser")
+    assert res.ok and res.pushed
+    show = subprocess.run(
+        ["git", "-C", str(bare), "show", "HEAD:content/lore/npcs/captain-powderkeg.md"],
+        check=True, capture_output=True, text=True,
+    ).stdout
+    assert "status: dead" in show
+    msg = subprocess.run(
+        ["git", "-C", str(bare), "log", "-1", "--format=%s"],
+        check=True, capture_output=True, text=True,
+    ).stdout
+    assert "update captain-powderkeg (via @captainuser)" in msg
+
+
+def test_divergent_rebase_retry_succeeds(content_repo, content_root, tmp_path):
+    bare = make_bare(tmp_path)
+    add_origin(content_repo, bare)
+
+    # local commit editing file A (glossary)
+    glossary = content_root / "glossary" / "glossary.yaml"
+    glossary.write_text(glossary.read_text() + "\n# local note\n")
+    git(content_repo, "commit", "-am", "local glossary note")
+
+    # clone2 edits a DIFFERENT file B (timeline) and pushes -> remote diverges
+    c2 = clone(bare, tmp_path / "c2")
+    events = c2 / "content" / "timeline" / "events.yaml"
+    events.write_text(events.read_text() + "\n# remote note\n")
+    git(c2, "commit", "-am", "remote timeline note")
+    git(c2, "push")
+
+    res = gitops.push_with_retry(content_repo, ["content/glossary/glossary.yaml"])
+    assert res.ok and res.pushed and not res.conflict
+    # both changes survive on the remote
+    g = subprocess.run(["git", "-C", str(bare), "show", "HEAD:content/glossary/glossary.yaml"],
+                       check=True, capture_output=True, text=True).stdout
+    t = subprocess.run(["git", "-C", str(bare), "show", "HEAD:content/timeline/events.yaml"],
+                       check=True, capture_output=True, text=True).stdout
+    assert "# local note" in g
+    assert "# remote note" in t
+
+
+def test_true_conflict_returns_both_versions(content_repo, content_root, tmp_path):
+    bare = make_bare(tmp_path)
+    add_origin(content_repo, bare)
+    target = content_root / "lore" / "npcs" / "captain-powderkeg.md"
+
+    # local rewrites the whole file
+    target.write_text("LOCAL VERSION\n")
+    git(content_repo, "commit", "-am", "local rewrite")
+
+    # clone2 rewrites the SAME file differently and pushes -> conflicting
+    c2 = clone(bare, tmp_path / "c2")
+    (c2 / "content" / "lore" / "npcs" / "captain-powderkeg.md").write_text("REMOTE VERSION\n")
+    git(c2, "commit", "-am", "remote rewrite")
+    git(c2, "push")
+
+    res = gitops.push_with_retry(content_repo, ["content/lore/npcs/captain-powderkeg.md"])
+    assert res.conflict is True
+    assert not res.ok
+    assert res.both_versions  # ours/theirs captured
+    blob = next(iter(res.both_versions.values()))
+    assert "LOCAL VERSION" in blob and "REMOTE VERSION" in blob
+    # rebase was aborted — no rebase in progress, our commit is intact
+    assert not (content_repo / ".git" / "rebase-merge").exists()
+    assert not (content_repo / ".git" / "rebase-apply").exists()
+    assert target.read_text() == "LOCAL VERSION\n"
+
+
+def test_bails_on_unrelated_dirty_tree(content_repo, content_root):
+    # dirty an unrelated file (append to its body, keeping frontmatter valid)
+    sundering = content_root / "lore" / "concepts" / "the-sundering.md"
+    sundering.write_text(sundering.read_text() + "\n<!-- hand edit -->\n")
+    res = gitops.apply_operation(content_repo, content_root, CREATE_OP, "you")
+    assert not res.ok
+    assert "unrelated changes" in res.message
