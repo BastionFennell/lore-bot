@@ -21,3 +21,7 @@
     Fathoms and Kin will die too. The Darkness that Dwells at the Bottom of the Ocean,
     for example, represents an idea, an entity, and a whole class of related Fathoms
     such as Ghost Whales or Shadow Rays.
+- id: tidebound
+  term: Tidebound
+  definition: Magic users who have bound themselves or been bound to Fathoms. Their
+    practice is known as tidebinding, taught by the four {{tidal-schools}}.
