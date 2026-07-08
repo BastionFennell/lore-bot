@@ -197,3 +197,30 @@ def test_bails_on_unrelated_dirty_tree(content_repo, content_root):
     res = gitops.apply_operations(content_repo, content_root, CREATE_OP, "you")
     assert not res.ok
     assert "unrelated changes" in res.message
+
+
+def test_concurrent_applies_serialize(content_repo, content_root, tmp_path):
+    """Rapid ✅s run apply_operations from multiple threads at once; the repo
+    lock must serialize them so both commits land instead of git racing."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    bare = make_bare(tmp_path)
+    add_origin(content_repo, bare)
+
+    def op(term):
+        return {"tool": "add_glossary_term",
+                "input": {"term": term, "definition": f"About {term}."}}
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [
+            pool.submit(gitops.apply_operations, content_repo, content_root, [op("Alpha")], "tester"),
+            pool.submit(gitops.apply_operations, content_repo, content_root, [op("Beta")], "tester"),
+        ]
+        results = [f.result() for f in futures]
+
+    assert all(r.ok for r in results), [r.message for r in results]
+    log = git(content_repo, "log", "--oneline").stdout
+    assert "alpha" in log.lower() or "Alpha" in log
+    assert "beta" in log.lower() or "Beta" in log
+    blob = (content_root / "glossary" / "glossary.yaml").read_text()
+    assert "Alpha" in blob and "Beta" in blob

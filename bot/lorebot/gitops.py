@@ -16,6 +16,7 @@ Flow (per spec):
 from __future__ import annotations
 
 import subprocess
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -133,8 +134,19 @@ def _commit_message(plan: Plan, username: str) -> str:
     return f"{subject}\n\n{body}"
 
 
+# Serializes the whole pull -> apply -> commit -> push sequence. Rapid ✅
+# reactions run concurrent commits in executor threads; two git processes
+# racing in one working tree fail ("Cannot rebase onto multiple branches").
+_REPO_LOCK = threading.Lock()
+
+
 def apply_operations(repo_path, content_root, operations, username: str) -> ApplyResult:
     """Apply one op (dict) or a batch (list of dicts) as a single commit."""
+    with _REPO_LOCK:
+        return _apply_operations_locked(repo_path, content_root, operations, username)
+
+
+def _apply_operations_locked(repo_path, content_root, operations, username: str) -> ApplyResult:
     repo = Path(repo_path)
     content_root = Path(content_root)
 
