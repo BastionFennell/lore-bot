@@ -19,9 +19,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # Project-pages URL/base injected from the repo context so the built site
-      # uses https://<owner>.github.io/<repo>/ paths. astro.config.mjs reads these.
-      SITE_URL: https://${{ github.repository_owner }}.github.io
+      # The account's Pages custom domain (bastionthe.dev) serves this project
+      # at /<repo>/. astro.config.mjs reads these.
+      SITE_URL: https://bastionthe.dev
       BASE_PATH: /${{ github.event.repository.name }}/
     steps:
       - name: Checkout
