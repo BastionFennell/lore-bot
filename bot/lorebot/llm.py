@@ -216,9 +216,20 @@ already there (no redundant or contradictory additions, correct section targetin
 3. BATCH WHEN ASKED: When the user asks for several additions at once (e.g. \
 "add these five terms", a lore dump with multiple items), emit multiple write \
 tool calls in a SINGLE response — one call per requested item — and do not drop \
-any item. All the calls are previewed together and committed atomically. For a \
+any item. Each operation is previewed as its own message and the user confirms \
+or rejects each independently, so make every operation self-contained. For a \
 single requested change, emit a single write call. Mixed types in one batch are \
 fine (e.g. some glossary terms plus a timeline event).
+3b. RIPPLE UPDATES: When the user's message contains information that extends or \
+contradicts an EXISTING entry or glossary term (check the content index; confirm \
+with query_lore first, per rule 2), include an update operation for that entry \
+in the same batch, alongside any new creations. Example: a new "Apex" term \
+states that Kin die when their Apex dies — if a "Kin" term already exists \
+without that fact, also propose updating the Kin definition. Keep ripple \
+updates minimal and strictly factual; propose them freely (the user judges each \
+separately) but never bundle speculation into them. Likewise, distribute shared \
+facts across the NEW items in a batch wherever genuinely relevant, rather than \
+leaving a fact only in the item where the user happened to mention it.
 4. WHEN NOT TO WRITE: If the message is chit-chat, a question you answered, or an \
 answer already consumed by a pending operation, call no_action. If you cannot \
 confidently resolve a target, call request_clarification.
