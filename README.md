@@ -5,9 +5,10 @@ Isles (Ironsworn: Starforged). **GitHub is the single source of truth**: all lor
 is plain markdown/YAML in [`/content`](./content), and the [`/site`](./site)
 Astro project is just the reading surface that renders it.
 
-This repository is **Phase 1** of [`lorebot-spec.md`](./lorebot-spec.md) — content
-schemas, the static site, sample content, and the deploy pipeline. The Discord
-authoring bot is Phase 2 (see [`/bot/README.md`](./bot/README.md)).
+This repository covers **Phases 1–2** of [`lorebot-spec.md`](./lorebot-spec.md):
+content schemas, the static site, sample content, and the deploy pipeline
+(Phase 1), plus **LoreBot**, the Discord authoring bot (Phase 2, in
+[`/bot`](./bot)).
 
 ## Repository layout
 
@@ -106,8 +107,21 @@ project-pages paths work; `astro.config.mjs` reads those env vars (defaults:
 **One-time setup:** in the repo's **Settings → Pages**, set **Source** to
 **GitHub Actions**.
 
-## For Phase 2 (the bot)
+## LoreBot (Phase 2)
 
-The build-time slug index lives at `site/src/lib/lore-index.mjs` and exports a
-`slug → { url, title, type }` map (plus `lookupSlug`). The bot can reuse it
-instead of re-parsing frontmatter. See `bot/README.md`.
+[`/bot`](./bot) is **LoreBot**, a Python/discord.py bot that authors this content
+through natural language in one Discord channel (`#captains-log`). It parses an
+edit request via the Anthropic API, **previews the change as a diff**, and commits
+to git only after a `✅` reaction — every bot commit is attributed and revertible,
+and the archive works fine without it.
+
+- Setup (Discord app, intents, invite URL, env vars, running the bot + REPL, tests):
+  see [`bot/README.md`](./bot/README.md).
+- The bot ports the site's slug rules exactly: `bot/lorebot/content/slugify.py`
+  mirrors `site/src/lib/urls.mjs`, and `bot/lorebot/content/index.py` mirrors
+  `site/src/lib/lore-index.mjs` (same single-namespace uniqueness invariant).
+- Quick start: `cd bot && uv sync && uv run pytest`, then
+  `uv run python -m lorebot.repl` (needs only `ANTHROPIC_API_KEY` + `REPO_PATH`).
+
+Phase 3 will add the `/ask` quality pass and richer retrieval on top of the same
+engine.
