@@ -224,6 +224,7 @@ def run_engine(
     context: EngineContext,
     index: ContentIndex,
     max_iterations: int = MAX_ITERATIONS,
+    effort: str = "low",
 ) -> Outcome:
     system = _build_system(index, context)
     messages: list[dict] = [{"role": "user", "content": _build_user_message(context)}]
@@ -234,6 +235,9 @@ def run_engine(
                 model=model,
                 max_tokens=llm.MAX_TOKENS,
                 thinking={"type": "adaptive"},
+                # Intent parsing is simple work; the default "high" effort
+                # deliberates for minutes. "low" keeps replies snappy.
+                output_config={"effort": effort},
                 system=system,
                 tools=llm.TOOLS,
                 messages=messages,

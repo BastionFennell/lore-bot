@@ -26,6 +26,7 @@ class Config:
     discord_token: str | None
     anthropic_api_key: str | None
     anthropic_model: str
+    anthropic_effort: str
     guild_id: int | None
     channel_id: int | None
     allowed_user_ids: set[int]
@@ -51,17 +52,20 @@ def load_config(*, require_discord: bool = True, dotenv: bool = True) -> Config:
     if dotenv:
         load_dotenv()
 
-    repo_path = Path(os.environ.get("REPO_PATH", str(_REPO_ROOT))).expanduser().resolve()
+    # `or` (not a .get default): dotenv loads blank lines like `REPO_PATH=` as
+    # empty strings, which must fall back to the default too.
+    repo_path = Path(os.environ.get("REPO_PATH") or str(_REPO_ROOT)).expanduser().resolve()
     cfg = Config(
         discord_token=os.environ.get("DISCORD_TOKEN"),
         anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY"),
-        anthropic_model=os.environ.get("ANTHROPIC_MODEL", "claude-opus-4-8"),
+        anthropic_model=os.environ.get("ANTHROPIC_MODEL") or "claude-opus-4-8",
+        anthropic_effort=os.environ.get("ANTHROPIC_EFFORT") or "low",
         guild_id=_int_or_none(os.environ.get("GUILD_ID")),
         channel_id=_int_or_none(os.environ.get("CHANNEL_ID")),
         allowed_user_ids=_parse_user_ids(os.environ.get("ALLOWED_USER_IDS")),
         repo_path=repo_path,
         content_root=repo_path / "content",
-        site_base_url=os.environ.get("SITE_BASE_URL"),
+        site_base_url=os.environ.get("SITE_BASE_URL") or None,
         sqlite_path=Path(__file__).resolve().parents[1] / "lorebot.sqlite",
     )
 

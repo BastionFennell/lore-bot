@@ -53,7 +53,11 @@ def main() -> None:
             correction=line if pending_kind else None,
         )
         outcome = engine_mod.run_engine(
-            client=client, model=config.anthropic_model, context=ctx, index=index
+            client=client,
+            model=config.anthropic_model,
+            context=ctx,
+            index=index,
+            effort=config.anthropic_effort,
         )
         recent.append({"author": "you", "content": line})
         recent = recent[-5:]

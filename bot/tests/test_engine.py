@@ -103,3 +103,15 @@ def test_iteration_cap_returns_error(index):
     out = run_engine(client=client, model="m", context=_ctx(), index=index, max_iterations=3)
     assert isinstance(out, Error)
     assert len(client.calls) == 3
+
+
+def test_effort_reaches_the_api_call(index):
+    client = FakeAnthropicClient([FakeMessage("end_turn", [FakeText("hi")])])
+    run_engine(client=client, model="m", context=_ctx(), index=index, effort="medium")
+    assert client.calls[0]["output_config"] == {"effort": "medium"}
+
+
+def test_effort_defaults_to_low(index):
+    client = FakeAnthropicClient([FakeMessage("end_turn", [FakeText("hi")])])
+    run_engine(client=client, model="m", context=_ctx(), index=index)
+    assert client.calls[0]["output_config"] == {"effort": "low"}

@@ -85,16 +85,19 @@ class LoreBot(discord.Client):
             correction=correction,
         )
         loop = asyncio.get_running_loop()
-        outcome = await loop.run_in_executor(
-            None,
-            functools.partial(
-                engine_mod.run_engine,
-                client=self.llm_client,
-                model=self.config.anthropic_model,
-                context=ctx,
-                index=index,
-            ),
-        )
+        # Typing indicator shows the bot is working while the model thinks.
+        async with message.channel.typing():
+            outcome = await loop.run_in_executor(
+                None,
+                functools.partial(
+                    engine_mod.run_engine,
+                    client=self.llm_client,
+                    model=self.config.anthropic_model,
+                    context=ctx,
+                    index=index,
+                    effort=self.config.anthropic_effort,
+                ),
+            )
         await self._dispatch(message, index, outcome, correction=correction)
 
     async def _dispatch(self, message, index, outcome, *, correction=None):
