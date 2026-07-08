@@ -64,22 +64,27 @@ def main() -> None:
 
         if isinstance(outcome, engine_mod.ProposedWrite):
             try:
-                plan = preview.build_plan(config.content_root, index, outcome.operations)
+                plans = preview.build_plans(config.content_root, index, outcome.operations)
             except (entries_mod.SlugCollisionError, entries_mod.EntryError) as e:
                 print(f"⚠️  {e}")
                 pending_ctx = pending_kind = None
                 continue
-            print("\n" + plan.preview)
-            answer = _prompt("\nApply? [y/N] ").strip().lower()
-            if answer == "y":
-                result = gitops.apply_operations(
-                    config.repo_path, config.content_root, outcome.operations, "you"
-                )
-                print(("✅ " if result.ok else "⚠️  ") + result.message)
-                if result.commit_sha:
-                    print(f"Commit {result.commit_sha[:8]}")
-            else:
-                print("Cancelled — nothing committed.")
+            n = len(plans)
+            # Each op is confirmed and committed on its own (a batch is N prompts,
+            # N independent commits) — yes to some, no to others.
+            for k, plan in enumerate(plans, start=1):
+                print("\n" + plan.preview)
+                label = "Apply?" if n == 1 else f"Apply {k}/{n}?"
+                answer = _prompt(f"\n{label} [y/N] ").strip().lower()
+                if answer == "y":
+                    result = gitops.apply_operations(
+                        config.repo_path, config.content_root, [outcome.operations[k - 1]], "you"
+                    )
+                    print(("✅ " if result.ok else "⚠️  ") + result.message)
+                    if result.commit_sha:
+                        print(f"Commit {result.commit_sha[:8]}")
+                else:
+                    print("Skipped — nothing committed.")
             pending_ctx = pending_kind = None
         elif isinstance(outcome, engine_mod.Clarification):
             print(outcome.question)

@@ -142,7 +142,43 @@ def build_plan(content_root: Path, index: ContentIndex, operations) -> Plan:
     return _compose(op_plans)
 
 
-def _compose(op_plans: list[OpPlan]) -> Plan:
+def build_plans(content_root: Path, index: ContentIndex, operations) -> list[Plan]:
+    """Build one single-op :class:`Plan` **per op**, threading a cumulative
+    overlay so op *k*'s preview reflects ops 1..k-1 (previews stack in the same
+    file just as the commits will). Used by the per-op confirmation UX, where
+    each op gets its own preview message and its own ✅/❌.
+
+    For a batch (N > 1) each plan's ``preview`` is headed ``k/N — kind: target``;
+    a single op (N == 1) is identical to :func:`build_plan` (no header). May
+    raise ``entries.SlugCollisionError`` / ``entries.EntryError`` (both block);
+    on a batch the error names the offending op.
+    """
+    content_root = Path(content_root)
+    ops = [operations] if isinstance(operations, dict) else list(operations)
+    if not ops:
+        raise entries.EntryError("No operation to preview.")
+    n = len(ops)
+
+    overlay: dict[str, str] = {}
+    created_slugs: set[str] = set()
+    plans: list[Plan] = []
+    for i, op in enumerate(ops, start=1):
+        try:
+            op_plan = _plan_one(content_root, index, op, overlay, created_slugs)
+        except (entries.SlugCollisionError, entries.EntryError) as e:
+            if n == 1:
+                raise
+            raise type(e)(
+                f"Batch blocked at op {i}/{n} ({_op_ref(op)}): {e}"
+            ) from e
+        overlay.update(op_plan.files)
+        if op_plan.kind == "create_entry":
+            created_slugs.add(op_plan.target)
+        plans.append(_compose([op_plan], index=i, total=n))
+    return plans
+
+
+def _compose(op_plans: list[OpPlan], *, index: int | None = None, total: int | None = None) -> Plan:
     files: dict[str, str] = {}
     warnings: list[str] = []
     for op in op_plans:
@@ -150,7 +186,11 @@ def _compose(op_plans: list[OpPlan]) -> Plan:
         warnings.extend(op.warnings)
 
     n = len(op_plans)
-    if n == 1:
+    if index is not None and total and total > 1:
+        # A single op rendered as one item of a larger batch: k/N header.
+        op = op_plans[0]
+        preview = f"**{index}/{total} — {op.label}**\n\n{op.block}\n\n" + _footer(warnings)
+    elif n == 1:
         op = op_plans[0]
         preview = op.title_line + "\n\n" + op.block + "\n\n" + _footer(warnings)
     else:

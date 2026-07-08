@@ -15,6 +15,11 @@ import logging
 import discord
 from discord.ext import tasks
 
+# Pacing between consecutive Discord API calls when fanning out a batch: separate
+# preview messages and the two reactions per message, kept clear of rate limits.
+REACTION_PACE = 0.3  # between the ✅ and ❌ on one message
+MESSAGE_PACE = 0.5  # between consecutive preview messages / reaction groups
+
 from . import engine as engine_mod
 from . import gitops, llm, preview
 from .config import Config, ConfigError, load_config
@@ -68,18 +73,34 @@ class LoreBot(discord.Client):
             log.info("skipping already-processed message %s", message.id)
             return
         user_id = str(message.author.id)
-        pending = self.store.get(user_id)
+        items = self.store.get(user_id)
+        clarification = next((i for i in items if i.state == AWAITING_CLARIFICATION), None)
+        confirmations = [i for i in items if i.state == AWAITING_CONFIRMATION]
 
-        if pending is not None and pending.state == AWAITING_CONFIRMATION:
-            # A non-reaction text reply at the confirmation stage = a correction.
-            await self._run(message, correction=message.content, prior=pending)
+        # Literal "cancel all" clears every pending item for the requesting user.
+        if items and message.content.strip().lower() == "cancel all":
+            self.store.clear(user_id)
+            n = len(items)
+            await self._send(
+                message.channel,
+                f"❌ Cancelled all {n} pending item{'s' if n != 1 else ''} — nothing was committed.",
+            )
             return
-        if pending is not None and pending.state == AWAITING_CLARIFICATION:
-            await self._run(message, correction=message.content, prior=pending)
+
+        if clarification is not None:
+            # A non-reaction text reply while awaiting clarification = an answer.
+            await self._run(message, correction=message.content, prior=clarification)
+            return
+        if confirmations:
+            # A non-reaction text reply while previews await confirmation = a
+            # correction (the engine decides: revised proposal vs. still-waiting).
+            await self._run(
+                message, correction=message.content, prior=confirmations[0], outstanding=confirmations
+            )
             return
         await self._run(message)
 
-    async def _run(self, message: discord.Message, *, correction=None, prior=None):
+    async def _run(self, message: discord.Message, *, correction=None, prior=None, outstanding=None):
         index = ContentIndex(self.config.content_root)
         recent = await self._recent_messages(message)
         ctx = engine_mod.EngineContext(
@@ -104,32 +125,42 @@ class LoreBot(discord.Client):
                     effort=self.config.anthropic_effort,
                 ),
             )
-        await self._dispatch(message, index, outcome, correction=correction)
+        await self._dispatch(message, index, outcome, correction=correction, outstanding=outstanding)
 
-    async def _dispatch(self, message, index, outcome, *, correction=None):
+    async def _dispatch(self, message, index, outcome, *, correction=None, outstanding=None):
         user_id = str(message.author.id)
+        outstanding = outstanding or []
         if isinstance(outcome, engine_mod.ProposedWrite):
             try:
-                plan = preview.build_plan(self.config.content_root, index, outcome.operations)
+                plans = preview.build_plans(self.config.content_root, index, outcome.operations)
             except (entries_mod.SlugCollisionError, entries_mod.EntryError) as e:
-                self.store.clear(user_id)
+                # A bad (correcting) proposal leaves the outstanding previews alone.
+                if not outstanding:
+                    self.store.clear(user_id)
                 await self._send(message.channel, f"⚠️ {e}")
                 return
-            sent = await self._send(message.channel, plan.preview)
-            preview_msg = sent[-1] if sent else None
-            self.store.set_awaiting_confirmation(
-                user_id,
-                operations=outcome.operations,
-                preview_message_id=preview_msg.id if preview_msg else None,
-                context={"message_text": message.content},
-            )
-            if preview_msg:
-                await preview_msg.add_reaction(CONFIRM_EMOJI)
-                # Discord's add-reaction bucket is ~1/250ms; pacing the second
-                # reaction avoids a 429 (and the noisy rate-limit warning).
-                await asyncio.sleep(0.3)
-                await preview_msg.add_reaction(CANCEL_EMOJI)
+            if outstanding:
+                # A valid correction replaces the outstanding previews.
+                self.store.clear(user_id)
+                n = len(outstanding)
+                await self._send(
+                    message.channel,
+                    f"Replacing {n} outstanding preview{'s' if n != 1 else ''} "
+                    "with the corrected proposal.",
+                )
+            await self._present_proposal(message, plans, outcome.operations)
         elif isinstance(outcome, engine_mod.Clarification):
+            if outstanding:
+                # The engine read this as unrelated / needs-clarification: keep the
+                # outstanding previews and remind the user they're still waiting.
+                labels = ", ".join(self._item_label(i) for i in outstanding)
+                n = len(outstanding)
+                await self._send(
+                    message.channel,
+                    f"Still waiting on {n} pending preview{'s' if n != 1 else ''}: {labels} — "
+                    "react ✅/❌ on each, or say 'cancel all'.",
+                )
+                return
             text = outcome.question
             if outcome.options:
                 text += "\n" + "\n".join(f"• {o}" for o in outcome.options)
@@ -138,10 +169,61 @@ class LoreBot(discord.Client):
                 user_id, question=outcome.question, context={"message_text": message.content}
             )
         elif isinstance(outcome, engine_mod.Conversational):
-            self.store.clear(user_id)
+            # Don't clobber outstanding previews on an incidental reply.
+            if not outstanding:
+                self.store.clear(user_id)
             await self._send(message.channel, outcome.text)
         else:  # Error
             await self._send(message.channel, f"⚠️ {outcome.message}")
+
+    async def _present_proposal(self, message, plans, operations):
+        """Send one preview message per op (each with its own ✅/❌), persist a
+        pending row per op, then add reactions — all paced to avoid rate limits."""
+        user_id = str(message.author.id)
+        items = []
+        sent_msgs = []
+        for k, plan in enumerate(plans):
+            if k > 0:
+                await asyncio.sleep(MESSAGE_PACE)
+            sent = await self._send(message.channel, plan.preview)
+            preview_msg = sent[-1] if sent else None
+            sent_msgs.append(preview_msg)
+            items.append(
+                {
+                    "operations": [operations[k]],
+                    "preview_message_id": preview_msg.id if preview_msg else None,
+                    "context": {
+                        "message_text": message.content,
+                        "label": plan.ops[0].target,
+                    },
+                }
+            )
+        # Persist rows before reacting so a fast ✅ always finds its pending item.
+        self.store.set_awaiting_confirmation(user_id, items)
+        for i, preview_msg in enumerate(sent_msgs):
+            if preview_msg is None:
+                continue
+            if i > 0:
+                await asyncio.sleep(MESSAGE_PACE)
+            await preview_msg.add_reaction(CONFIRM_EMOJI)
+            # Discord's add-reaction bucket is ~1/250ms; pace the second reaction.
+            await asyncio.sleep(REACTION_PACE)
+            await preview_msg.add_reaction(CANCEL_EMOJI)
+
+    @staticmethod
+    def _item_label(pending) -> str:
+        """Short target label for an item ("kin", "gull-reef", …)."""
+        if pending.context and pending.context.get("label"):
+            return pending.context["label"]
+        op = (pending.operations or [{}])[0]
+        data = op.get("input", {}) or {}
+        return (
+            data.get("slug")
+            or data.get("term")
+            or data.get("title")
+            or data.get("date_in_fiction")
+            or "item"
+        )
 
     # --- reactions ---------------------------------------------------------
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -157,8 +239,11 @@ class LoreBot(discord.Client):
         if emoji == CONFIRM_EMOJI:
             await self._commit(channel, pending, payload.user_id)
         elif emoji == CANCEL_EMOJI:
-            self.store.clear(pending.user_id)
-            await self._send(channel, "❌ Cancelled — nothing was committed.")
+            # Cancel just this item; any siblings in the batch keep waiting.
+            self.store.clear_item(preview_message_id=str(payload.message_id))
+            await self._send(
+                channel, f"❌ Cancelled {self._item_label(pending)} — nothing was committed."
+            )
 
     async def _commit(self, channel, pending, user_id):
         username = "unknown"
@@ -178,10 +263,10 @@ class LoreBot(discord.Client):
                 ),
             )
         except (entries_mod.SlugCollisionError, entries_mod.EntryError) as e:
-            self.store.clear(pending.user_id)
+            self.store.clear_item(row_id=pending.id)
             await self._send(channel, f"⚠️ {e}")
             return
-        self.store.clear(pending.user_id)
+        self.store.clear_item(row_id=pending.id)
         msg = f"{'✅' if result.ok else '⚠️'} {result.message}"
         if result.commit_sha:
             msg += f"\nCommit `{result.commit_sha[:8]}`."
@@ -199,11 +284,16 @@ class LoreBot(discord.Client):
         channel = self.get_channel(self.config.channel_id)
         if channel is None:
             return
-        for p in expired:
-            await self._send(
-                channel,
-                f"⌛ A pending operation from <@{p.user_id}> expired after 30 minutes and was cancelled.",
-            )
+        # One summary message for the whole sweep, not one per expired item.
+        labels = ", ".join(sorted({self._item_label(p) for p in expired}))
+        users = " ".join(f"<@{u}>" for u in sorted({p.user_id for p in expired}))
+        n = len(expired)
+        await self._send(
+            channel,
+            f"⌛ {n} pending item{'s' if n != 1 else ''} ({labels}) from {users} "
+            "expired after 30 minutes and "
+            f"{'were' if n != 1 else 'was'} cancelled.",
+        )
 
     @expiry_loop.before_loop
     async def _before_expiry(self):
