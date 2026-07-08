@@ -76,8 +76,11 @@ TOOLS: list[dict] = [
     ),
     _tool(
         "search_lore",
-        "Keyword/fuzzy search over titles, tags, summaries, and body text. Returns "
-        "matching slugs with summaries and a snippet. Use to resolve vague references.",
+        "Ranked keyword/fuzzy search across the whole corpus: entry titles, tags, "
+        "summaries and bodies, PLUS glossary terms and timeline events. Returns the "
+        "best matches (each tagged entry | glossary | timeline) with a summary, a "
+        "snippet, and the ref name to cite (entry slug or glossary id). Use to gather "
+        "sources for an /ask answer and to resolve vague references.",
         _obj({"query": {"type": "string"}}, ["query"]),
     ),
     # --- Write tools --------------------------------------------------------
@@ -234,7 +237,11 @@ leaving a fact only in the item where the user happened to mention it.
 answer already consumed by a pending operation, call no_action. If you cannot \
 confidently resolve a target, call request_clarification.
 5. QUESTIONS (/ask): Use read tools (search_lore, query_lore) to gather relevant \
-entries, then answer conversationally with the slugs you cited. Do not call a write \
+material, then answer conversationally. CITE YOUR SOURCES INLINE: for every entry \
+or glossary term your answer draws on, drop a {{slug}} or {{glossary-id}} ref right \
+where you mention it (the transport renders each ref as a link). Cite only refs that \
+search_lore/query_lore actually returned — never invent a slug or id. If the search \
+turned up nothing relevant, say so plainly rather than guessing. Do not call a write \
 tool for a question.
 6. CROSS-LINKS: Use {{ref}} syntax in body text and in glossary definitions / \
 timeline descriptions. A {{ref}} may point at an entry slug OR a glossary term \

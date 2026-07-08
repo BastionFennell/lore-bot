@@ -7,9 +7,10 @@ as a diff**, and commits to git only after a `✅` reaction. Everything it does,
 human can do by editing the markdown in [`../content`](../content) directly — the
 bot is a convenience layer with zero lock-in.
 
-See [`../lorebot-spec.md`](../lorebot-spec.md) for the full design. This is
-**Phase 2** (writes + the machinery). `/ask` Q&A runs through the same loop but
-gets its quality pass in Phase 3.
+See [`../lorebot-spec.md`](../lorebot-spec.md) for the full design. Writes + the
+machinery landed in Phase 2; **Phase 3** adds the `/ask` quality pass — ranked
+corpus search and cited answers (see [Phase 3](#phase-3--ask-quality-pass-done)
+below).
 
 ## What's here
 
@@ -128,12 +129,27 @@ temporary git repo, so the real repo is never touched. Engine tests use a
 scripted fake Anthropic client. Slug parity is verified against the real
 `urls.mjs` by shelling out to Node (skipped if Node is absent).
 
-## Notes for Phase 3
+## Phase 3 — `/ask` quality pass (done)
 
-- `/ask` already works through the engine: a question classifies as read-tools +
-  a conversational answer (no write tool fires). The quality pass — ranked
-  retrieval, cited answers, snippets — is Phase 3.
-- `search_lore` in `engine.py` is a **basic** keyword/term-frequency scan over
-  titles/summaries/body with a naive snippet. It's the obvious upgrade target.
-- Timeline events via the bot exist (`add_timeline_event`) but timeline UX/quality
-  is also a Phase 3 concern.
+- **Ranked search** (`lorebot/search.py`, replacing the old placeholder in
+  `engine.py`). It searches the whole corpus — lore/character/map entries
+  (title, tags, summary, body), glossary terms, and timeline events — and tags
+  each result `entry | glossary | timeline`. Ranking is field-weighted
+  (title/term ≫ tags ≫ summary/definition ≫ body); multi-term queries reward
+  documents that cover more *distinct* terms over ones that just repeat one.
+  `rapidfuzz` adds typo tolerance ("tidebund" → **Tidebound**), with fuzzy hits
+  always scoring below exact ones. Results are capped at 8 and rendered as
+  readable, citable lines (each carries its entry slug / glossary id); snippets
+  are cut at sentence boundaries (word boundaries as a fallback), ~200 chars,
+  never mid-word.
+- **Cited answers.** For `/ask`, the model cites sources inline with `{{slug}}`
+  / `{{glossary-id}}` refs. Both transports (`main.py`, `repl.py`) run
+  Conversational answers through `lorebot/refrender.py`, which turns each ref
+  into `**Title** (<url>)` — entry refs → entry page URL, glossary ids →
+  glossary anchor (entry wins on a name collision). Unknown refs render as the
+  bare name (no dead link); with no `SITE_BASE_URL` set they render as plain
+  `**Title**` / term name. URL construction is shared with `siteurls.py` so
+  post-commit links and inline citations stay in one place. Previews/diffs keep
+  raw `{{refs}}` — that's the committed content.
+- Timeline events via the bot (`add_timeline_event`) are now also surfaced in
+  search results.
