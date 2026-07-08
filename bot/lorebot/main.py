@@ -21,7 +21,7 @@ REACTION_PACE = 0.3  # between the ✅ and ❌ on one message
 MESSAGE_PACE = 0.5  # between consecutive preview messages / reaction groups
 
 from . import engine as engine_mod
-from . import gitops, llm, preview, siteurls
+from . import gitops, llm, preview, refrender, siteurls
 from .config import Config, ConfigError, load_config
 from .content import entries as entries_mod
 from .content.index import ContentIndex
@@ -172,7 +172,13 @@ class LoreBot(discord.Client):
             # Don't clobber outstanding previews on an incidental reply.
             if not outstanding:
                 self.store.clear(user_id)
-            await self._send(message.channel, outcome.text)
+            # Render inline {{refs}} in /ask answers to links before sending.
+            text = refrender.render_refs(
+                outcome.text,
+                self.config.content_root,
+                getattr(self.config, "site_base_url", None),
+            )
+            await self._send(message.channel, text)
         else:  # Error
             await self._send(message.channel, f"⚠️ {outcome.message}")
 

@@ -168,6 +168,26 @@ def test_iteration_cap_returns_error(index):
     assert len(client.calls) == 3
 
 
+def test_ask_flow_executes_search_and_keeps_refs(content_repo, index):
+    # /ask: search_lore runs the real search module, then a conversational answer
+    # comes back with inline {{refs}} intact (rendering is transport-level).
+    client = FakeAnthropicClient([
+        FakeMessage("tool_use", [FakeToolUse("search_lore", {"query": "veldrane"}, "t1")]),
+        FakeMessage("end_turn", [FakeText(
+            "House Veldrane rules the Reach at gunpoint. {{house-veldrane}}")]),
+    ])
+    out = run_engine(client=client, model="m",
+                     context=_ctx("what do we know about house veldrane?"), index=index)
+    assert isinstance(out, Conversational)
+    assert "{{house-veldrane}}" in out.text  # refs NOT rendered inside the engine
+    # The search tool result was fed back to the model on the second call.
+    flat = json.dumps(client.calls[1]["messages"], default=str)
+    assert "house-veldrane" in flat
+    assert "cite as {{house-veldrane}}" in flat  # new search module's rendered output
+    # No write tool fired; repo untouched.
+    assert git(content_repo, "status", "--porcelain").stdout.strip() == ""
+
+
 def test_effort_reaches_the_api_call(index):
     client = FakeAnthropicClient([FakeMessage("end_turn", [FakeText("hi")])])
     run_engine(client=client, model="m", context=_ctx(), index=index, effort="medium")

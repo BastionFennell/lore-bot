@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 
 from . import engine as engine_mod
-from . import gitops, llm, preview, siteurls
+from . import gitops, llm, preview, refrender, siteurls
 from .config import ConfigError, load_config
 from .content import entries as entries_mod
 from .content.index import ContentIndex
@@ -98,7 +98,7 @@ def main() -> None:
             pending_ctx = {"question": outcome.question}
             pending_kind = "clarify"
         elif isinstance(outcome, engine_mod.Conversational):
-            print(outcome.text)
+            print(refrender.render_refs(outcome.text, config.content_root, config.site_base_url))
             pending_ctx = pending_kind = None
         else:  # Error
             print(f"⚠️  {outcome.message}")

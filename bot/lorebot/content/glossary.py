@@ -54,6 +54,29 @@ def glossary_ids(content_root: Path, *, current_content: str | None = None) -> s
     return {i["id"] for i in items if isinstance(i, dict) and i.get("id")}
 
 
+def glossary_terms(content_root: Path, *, current_content: str | None = None) -> dict[str, str]:
+    """Return an ``id -> display term`` map of the glossary.
+
+    Used to resolve a ``{{glossary-id}}`` ref to the term's display text when
+    rendering inline citations (see ``refrender``).
+    """
+    path = Path(content_root) / GLOSSARY_RELPATH
+    if current_content is not None:
+        text = current_content
+    else:
+        text = path.read_text(encoding="utf-8") if path.exists() else ""
+    if not text:
+        return {}
+    items = yaml.safe_load(text) or []
+    if not isinstance(items, list):
+        return {}
+    return {
+        i["id"]: (i.get("term") or i["id"])
+        for i in items
+        if isinstance(i, dict) and i.get("id")
+    }
+
+
 def add_glossary_term(
     content_root: Path,
     *,
