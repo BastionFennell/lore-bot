@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import llm
+from . import search as search_mod
 from .content import entries as entries_mod
 from .content.index import ContentIndex
 from .fuzzy import hints_block
@@ -143,50 +144,11 @@ def _execute_read(tool_name: str, tool_input: dict, ctx: EngineContext,
             except entries_mod.EntryError as e:
                 return f"ERROR: {e}"
         if tool_name == "search_lore":
-            return _search_lore(tool_input.get("query", ""), index)
+            return search_mod.search_lore(tool_input.get("query", ""), index)
     except Exception as e:  # never let a read tool crash the loop
         log.exception("read tool %s failed", tool_name)
         return f"ERROR: {e}"
     return f"ERROR: unknown read tool {tool_name}"
-
-
-def _search_lore(query: str, index: ContentIndex) -> str:
-    """Basic keyword search over titles/tags/summaries + body text.
-
-    Phase 3 will replace this with a quality pass (ranking, snippets, relevance).
-    """
-    q = (query or "").lower().strip()
-    terms = [t for t in q.split() if t]
-    if not terms:
-        return "(empty query)"
-    results = []
-    for e in index.all():
-        try:
-            body = e.path.read_text(encoding="utf-8")
-        except OSError:
-            body = ""
-        haystack = f"{e.title}\n{e.summary}\n{body}".lower()
-        score = sum(haystack.count(t) for t in terms)
-        if score:
-            snippet = _snippet(body, terms)
-            results.append((score, e.slug, e.summary, snippet))
-    if not results:
-        return f"(no matches for {query!r})"
-    results.sort(key=lambda r: r[0], reverse=True)
-    lines = []
-    for _score, slug, summary, snippet in results[:8]:
-        lines.append(f"- {slug}: {summary}\n  …{snippet}…")
-    return "\n".join(lines)
-
-
-def _snippet(body: str, terms: list[str], width: int = 80) -> str:
-    low = body.lower()
-    for t in terms:
-        i = low.find(t)
-        if i != -1:
-            start = max(0, i - width // 2)
-            return " ".join(body[start : start + width].split())
-    return " ".join(body[:width].split())
 
 
 # --- Content-block helpers (work with real SDK blocks and test fakes) -------
