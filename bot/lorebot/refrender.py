@@ -36,20 +36,35 @@ def render_refs(text: str, content_root: Path, site_base_url: str | None) -> str
     index = ContentIndex(content_root)
     terms = glossary_terms(content_root)
 
-    def _replace(match) -> str:
-        ref = match.group(1)
+    def _resolve(ref: str) -> tuple[str, str]:
+        """Return (rendered replacement, display name) for one ref."""
         entry = index.lookup(ref)
         if entry is not None:  # entry wins on a name collision
             if site_base_url:
                 url = siteurls.entry_page_url(site_base_url, entry.type, ref)
-                return f"**{entry.title}** (<{url}>)"
-            return f"**{entry.title}**"
+                return f"**{entry.title}** (<{url}>)", entry.title
+            return f"**{entry.title}**", entry.title
         if ref in terms:
             term = terms[ref]
             if site_base_url:
                 url = siteurls.glossary_anchor_url(site_base_url, ref)
-                return f"**{term}** (<{url}>)"
-            return term  # plain term name when there's nowhere to link
-        return ref  # unknown ref: bare name, no braces, no dead link
+                return f"**{term}** (<{url}>)", term
+            return term, term  # plain term name when there's nowhere to link
+        return ref, ref  # unknown ref: bare name, no braces, no dead link
 
-    return _REF_RE.sub(_replace, text)
+    out: list[str] = []
+    last = 0
+    for match in _REF_RE.finditer(text):
+        rendered, name = _resolve(match.group(1))
+        prefix = text[last : match.start()]
+        # The model sometimes writes the name AND the ref ("Tidebound
+        # {{tidebound}}"); the ref alone renders the name, so collapse the
+        # duplicate mention immediately preceding it.
+        dup = re.search(rf"\b{re.escape(name)}[ \t]*$", prefix, re.IGNORECASE)
+        if dup:
+            prefix = prefix[: dup.start()]
+        out.append(prefix)
+        out.append(rendered)
+        last = match.end()
+    out.append(text[last:])
+    return "".join(out)

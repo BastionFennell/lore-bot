@@ -44,3 +44,29 @@ def test_mixed_text_entry_glossary_and_unknown(content_root):
 
 def test_text_without_refs_is_unchanged(content_root):
     assert render_refs("Plain answer, no refs.", content_root, BASE) == "Plain answer, no refs."
+
+
+def test_duplicate_name_before_ref_collapses(content_root):
+    # Model wrote the name AND the ref; the rendered output must not repeat it.
+    out = render_refs(
+        "the practice of the Tidebound {{tidebound}} in the isles",
+        content_root, "https://x.dev/s",
+    )
+    assert out.count("Tidebound") == 1
+    assert "Tidebound **Tidebound**" not in out
+
+
+def test_duplicate_collapse_is_case_insensitive(content_root):
+    out = render_refs("ask the TIDEBOUND {{tidebound}}", content_root, None)
+    assert out.lower().count("tidebound") == 1
+
+
+def test_non_duplicate_prefix_untouched(content_root):
+    out = render_refs("bound to Fathoms, see {{tidebound}}", content_root, None)
+    assert out.startswith("bound to Fathoms, see ")
+
+
+def test_partial_word_prefix_not_collapsed(content_root):
+    # "Untidebound" ends with the name but is a different word — keep it.
+    out = render_refs("Untidebound {{tidebound}}", content_root, None)
+    assert out.startswith("Untidebound ")

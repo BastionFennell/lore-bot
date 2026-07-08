@@ -238,8 +238,10 @@ answer already consumed by a pending operation, call no_action. If you cannot \
 confidently resolve a target, call request_clarification.
 5. QUESTIONS (/ask): Use read tools (search_lore, query_lore) to gather relevant \
 material, then answer conversationally. CITE YOUR SOURCES INLINE: for every entry \
-or glossary term your answer draws on, drop a {{slug}} or {{glossary-id}} ref right \
-where you mention it (the transport renders each ref as a link). Cite only refs that \
+or glossary term your answer draws on, write a {{slug}} or {{glossary-id}} ref IN \
+PLACE of the name — "taught by the four {{tidal-schools}}", NEVER "taught by the \
+four Tidal Schools {{tidal-schools}}". Each ref renders as the name plus a link, so \
+writing the name and then the ref shows the name twice. Cite only refs that \
 search_lore/query_lore actually returned — never invent a slug or id. If the search \
 turned up nothing relevant, say so plainly rather than guessing. Do not call a write \
 tool for a question.
