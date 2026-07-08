@@ -14,10 +14,14 @@ import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import matter from 'gray-matter';
-import { urlForType } from './urls.mjs';
+import { urlForType, basePath } from './urls.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CONTENT_ROOT = resolve(__dirname, '../../../content');
+const GLOSSARY_FILE = join(CONTENT_ROOT, 'glossary', 'glossary.yaml');
+
+// gray-matter bundles a YAML engine; reuse it so we don't add a dependency.
+const parseYaml = matter.engines.yaml.parse;
 
 function walkMarkdown(dir) {
   const out = [];
@@ -88,4 +92,45 @@ export const loreIndex = buildIndex();
 
 export function lookupSlug(slug) {
   return loreIndex.get(slug) || null;
+}
+
+// --- Glossary namespace -----------------------------------------------------
+//
+// Glossary term ids are a SEPARATE, secondary namespace: a {{ref}} resolves to
+// an entry slug first (see lookupRef) and only falls back to a glossary term.
+// A glossary ref points at the term's anchor on the single /glossary/ page.
+// Kept apart from `loreIndex` so the entry-index invariants above are untouched.
+
+function buildGlossaryIndex() {
+  const index = new Map();
+  let text;
+  try {
+    text = readFileSync(GLOSSARY_FILE, 'utf8');
+  } catch {
+    return index; // no glossary file yet
+  }
+  let items;
+  try {
+    items = parseYaml(text);
+  } catch {
+    return index;
+  }
+  if (!Array.isArray(items)) return index;
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+    const id = item.id;
+    if (!id) continue;
+    index.set(id, {
+      id,
+      name: item.term || id,
+      url: `${basePath()}glossary/#${id}`,
+    });
+  }
+  return index;
+}
+
+export const glossaryIndex = buildGlossaryIndex();
+
+export function lookupGlossary(id) {
+  return glossaryIndex.get(id) || null;
 }

@@ -2,6 +2,7 @@
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import { lookupSlug } from '../lib/lore-index.mjs';
+import { inlineLinks } from '../lib/inline-links.mjs';
 
 // Convention: `date` is a sortable in-fiction date string (e.g. 0847-03-12).
 // Events are ordered by that string ascending; `display_date` is the human form.
@@ -21,7 +22,7 @@ const events = (await getCollection('timeline')).sort((a, b) =>
       {events.map((e) => (
         <li>
           <div class="when">{e.data.display_date ?? e.data.date}</div>
-          <p>{e.data.description}</p>
+          <p set:html={inlineLinks(e.data.description)} />
           {e.data.related.length > 0 && (
             <p class="related">
               Related:{' '}

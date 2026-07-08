@@ -2,7 +2,7 @@
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import { lookupSlug } from '../lib/lore-index.mjs';
-import { slugify } from '../lib/urls.mjs';
+import { inlineLinks } from '../lib/inline-links.mjs';
 
 const terms = (await getCollection('glossary')).sort((a, b) =>
   a.data.term.localeCompare(b.data.term)
@@ -17,9 +17,9 @@ const terms = (await getCollection('glossary')).sort((a, b) =>
         const target = t.data.link_slug ? lookupSlug(t.data.link_slug) : null;
         return (
           <>
-            <dt id={slugify(t.data.term)}>{t.data.term}</dt>
+            <dt id={t.id}>{t.data.term}</dt>
             <dd>
-              {t.data.definition}
+              <Fragment set:html={inlineLinks(t.data.definition)} />
               {target && (
                 <>
                   {' '}<a href={target.url}>See {target.title} &rarr;</a>
