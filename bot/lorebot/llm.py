@@ -254,6 +254,32 @@ render as stub links on the site — so use them deliberately, not by accident.
 """
 
 
+# Appended (NOT part of STABLE_INSTRUCTIONS, so the cached block stays byte-stable)
+# to the synthetic user message when harvesting an RP transcript. It reframes the
+# same tools for extraction rather than dictation.
+HARVEST_INSTRUCTIONS = """\
+The following is a transcript of play-by-post roleplay from an RP channel, one line \
+per message as `[YYYY-MM-DD] author: content`. Read it and extract any durable, \
+lore-worthy content as write operations, following all the rules above:
+
+- Propose NEW entries, glossary terms, and timeline events for people, places, \
+factions, concepts, and in-fiction events that the fiction establishes and that are \
+not already recorded in the content index.
+- Propose RIPPLE UPDATES (rule 3b — call query_lore FIRST, per rule 2) where the \
+transcript adds to or extends an entry or term that already exists.
+- Quote or closely paraphrase the fiction as written; do NOT invent details the \
+transcript doesn't support.
+- Do NOT propose anything for idle chatter, out-of-character banter, or dice/mechanics \
+talk that carries no lasting lore.
+- Prefer fewer, richer operations over many thin ones — consolidate related facts into \
+one well-formed entry or section rather than scattering fragments.
+- It is completely fine to propose nothing: if the transcript adds no durable lore, \
+call no_action.
+
+Transcript follows.
+"""
+
+
 def build_client(api_key: str | None = None):
     """Construct a real Anthropic client. Imported lazily so tests never need it."""
     import anthropic

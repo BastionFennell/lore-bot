@@ -30,6 +30,7 @@ class Config:
     guild_id: int | None
     channel_id: int | None
     allowed_user_ids: set[int]
+    rp_source_ids: list[int]
     repo_path: Path
     content_root: Path
     site_base_url: str | None
@@ -48,6 +49,22 @@ def _parse_user_ids(value: str | None) -> set[int]:
     return {int(v.strip()) for v in value.split(",") if v.strip()}
 
 
+def _parse_id_list(value: str | None) -> list[int]:
+    """Comma-separated ids as an ordered, de-duplicated list (harvest reads sources
+    in config order, so unlike the allow-list this preserves order)."""
+    if not value:
+        return []
+    out: list[int] = []
+    for v in value.split(","):
+        v = v.strip()
+        if not v:
+            continue
+        n = int(v)
+        if n not in out:
+            out.append(n)
+    return out
+
+
 def load_config(*, require_discord: bool = True, dotenv: bool = True) -> Config:
     if dotenv:
         load_dotenv()
@@ -63,6 +80,7 @@ def load_config(*, require_discord: bool = True, dotenv: bool = True) -> Config:
         guild_id=_int_or_none(os.environ.get("GUILD_ID")),
         channel_id=_int_or_none(os.environ.get("CHANNEL_ID")),
         allowed_user_ids=_parse_user_ids(os.environ.get("ALLOWED_USER_IDS")),
+        rp_source_ids=_parse_id_list(os.environ.get("RP_SOURCE_IDS")),
         repo_path=repo_path,
         content_root=repo_path / "content",
         site_base_url=os.environ.get("SITE_BASE_URL") or None,
