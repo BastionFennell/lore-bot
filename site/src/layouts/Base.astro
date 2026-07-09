@@ -59,7 +59,9 @@ const isActive = (href: string) => href !== home && current.startsWith(href);
       <slot />
     </main>
     <footer class="site-footer">
-      An archive of the Sundered Isles &mdash; source of truth lives in git.
+      <div class="inner">
+        An archive of the Sundered Isles &mdash; source of truth lives in git.
+      </div>
     </footer>
   </body>
 </html>

@@ -11,9 +11,16 @@
   --surface: #faf8f1;     /* lifted parchment for cards / panels */
   --text: #1d2b3a;        /* ink-navy */
   --muted: #5c6672;       /* slate-grey meta */
-  --link: #3d5a73;        /* slate-blue */
-  --slate: #3d5a73;       /* structural blue: kickers, chips, meta labels, diamonds */
+  --link: #2b6d85;        /* sea-glass blue — links + lore refs */
+  --slate: #2b6d85;       /* sea-glass blue: kickers, chips, meta labels, compass ticks */
   --border: #c9bda7;      /* driftwood-tan hairline */
+
+  /* Ink-navy header/footer band + its parchment-silver type */
+  --header-bg: #1d2b3a;       /* deep ink-navy band */
+  --header-border: #16202c;   /* darker hairline seating the band */
+  --header-text: #ece7db;     /* parchment wordmark (11.7:1 on band) */
+  --header-nav: #b9c2cc;      /* silver nav, resting (8.0:1 on band) */
+  --header-nav-hover: #ece7db;/* nav lifts to full parchment on hover */
   --brass: #a9853b;       /* brass accent — used sparingly */
   --brass-text: #856526;  /* AA-safe brass for hover text on parchment */
   --rope: #c2ad82;        /* timeline rope, warm */
@@ -48,9 +55,16 @@
     --surface: #131c27;   /* lifted panel */
     --text: #c9d2da;      /* moonlit silver */
     --muted: #8a97a5;     /* desaturated slate */
-    --link: #7fa3c0;      /* lighter slate-blue */
-    --slate: #7fa3c0;     /* structural blue (night watch) */
+    --link: #86c3d4;      /* luminous sea-glass — links + lore refs */
+    --slate: #86c3d4;     /* luminous sea-glass (night watch) */
     --border: #2b3947;    /* desaturated slate hairline */
+
+    /* Lifted-navy band, distinct from the near-black page ground */
+    --header-bg: #16202c;
+    --header-border: #2b3947;
+    --header-text: #ece7db;      /* parchment wordmark (13.3:1 on band) */
+    --header-nav: #a3b2bf;       /* silver nav, resting (7.6:1 on band) */
+    --header-nav-hover: #ece7db;
     --brass: #c9a35a;     /* brass warms up */
     --brass-text: #d3b26f;
     --rope: #5c5443;
@@ -105,7 +119,7 @@ a:hover {
 code {
   font-family: 'Iosevka', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   font-size: 0.9em;
-  background: color-mix(in srgb, var(--brass) 12%, transparent);
+  background: color-mix(in srgb, var(--link) 12%, transparent);
   padding: 0.05em 0.35em;
   border-radius: 3px;
 }
@@ -124,8 +138,8 @@ code {
 
 /* --- Header ---------------------------------------------------------- */
 .site-header {
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  border-bottom: 1px solid var(--header-border);
+  background: var(--header-bg);
 }
 .site-header .inner {
   max-width: var(--max);
@@ -140,7 +154,7 @@ code {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  color: var(--text);
+  color: var(--header-text);
   text-decoration: none;
   margin-right: auto;
 }
@@ -168,16 +182,16 @@ code {
   font-size: 0.95rem;
 }
 .site-nav a {
-  color: var(--muted);
+  color: var(--header-nav);
   text-decoration: none;
   padding-bottom: 2px;
   border-bottom: 2px solid transparent;
 }
 .site-nav a:hover {
-  color: var(--text);
+  color: var(--header-nav-hover);
 }
 .site-nav a.active {
-  color: var(--text);
+  color: var(--header-nav-hover);
   border-bottom-color: var(--brass);
 }
 
@@ -188,12 +202,17 @@ main {
   padding: 2.5rem 1.25rem 4rem;
 }
 
+/* Matching quiet navy band, silver small-caps */
 .site-footer {
+  margin-top: 3rem;
+  background: var(--header-bg);
+  border-top: 1px solid var(--header-border);
+}
+.site-footer .inner {
   max-width: var(--max);
   margin: 0 auto;
   padding: 2rem 1.25rem;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
+  color: var(--header-nav);
   font-variant-caps: all-small-caps;
   letter-spacing: 0.05em;
   font-size: 0.95rem;
@@ -223,17 +242,21 @@ h2 {
      the text column rather than the full container. */
   max-width: var(--measure);
 }
-/* section-rule mark: a small slate compass-point centred on the hairline */
+/* section-rule mark: a small sea-glass compass-star centred on the hairline */
 h2::after {
   content: '';
   position: absolute;
   left: 50%;
-  bottom: -4px;
-  width: 7px;
-  height: 7px;
-  transform: translateX(-50%) rotate(45deg);
+  bottom: -5px;
+  width: 11px;
+  height: 11px;
+  transform: translateX(-50%);
   background: var(--slate);
   opacity: 0.9;
+  clip-path: polygon(
+    50% 0%, 60% 40%, 100% 50%, 60% 60%,
+    50% 100%, 40% 60%, 0% 50%, 40% 40%
+  );
 }
 h3 {
   font-size: 1.3rem;
@@ -284,7 +307,7 @@ article img {
    on narrow screens, over a faint blue-tinted wash. */
 .meta {
   font-size: 0.95rem;
-  background: color-mix(in srgb, var(--link) 6%, var(--surface));
+  background: color-mix(in srgb, var(--link) 12%, var(--surface));
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 0.5rem 0.9rem;
@@ -323,15 +346,16 @@ article img {
   font-size: 0.85rem;
   padding: 0.05rem 0.6rem;
   border-radius: 3px;
-  border: 1px solid color-mix(in srgb, var(--slate) 45%, var(--border));
-  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--slate) 40%, var(--border));
+  background: color-mix(in srgb, var(--slate) 9%, transparent);
   color: var(--slate);
   text-decoration: none;
-  transition: border-color 150ms ease, color 150ms ease;
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
 }
 .tag-list a:hover {
   color: var(--brass-text);
   border-color: var(--brass);
+  background: color-mix(in srgb, var(--brass) 8%, transparent);
 }
 
 /* --- Prose {{slug}} links -------------------------------------------- */
@@ -346,6 +370,10 @@ article img {
 .lore-link:hover {
   color: var(--brass-text);
   text-decoration-color: var(--brass);
+  /* a small whimsy: the underline breaks into waves on hover */
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
 }
 /* Stub / uncharted references: dashed, muted, annotated as (uncharted) */
 .stub-link {
@@ -506,12 +534,16 @@ article img {
   margin-left: -0.75rem;
 }
 
-/* --- Timeline (taut rope + knot markers) ---------------------------- */
+/* --- Timeline (taut rope + knot markers) ----------------------------
+   Mobile-first: a single taut rope down the left edge, entries indented.
+   Desktop (>=48rem): the rope runs down the CENTRE and entries alternate
+   sides as cards, with knots seated on the centre line. */
 .timeline {
   list-style: none;
   padding: 0;
   margin: 2rem 0;
   border-left: 2px solid var(--rope);
+  position: relative;
 }
 .timeline li {
   position: relative;
@@ -539,12 +571,74 @@ article img {
   border-radius: 50%;
   background: var(--brass);
 }
+/* Date is the anchor: sea-glass small-caps, first thing read */
 .timeline .when {
-  font-size: 0.9rem;
-  color: var(--muted);
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--slate);
+  line-height: 1.25;
+  margin-bottom: 0.15rem;
 }
-.timeline p {
+.timeline .event {
+  font-size: 1rem;
+  line-height: 1.55;
+  margin: 0.1rem 0 0;
   max-width: var(--measure);
+}
+/* Related row stays small and quiet */
+.timeline .related {
+  font-size: 0.8rem;
+  color: var(--slate);
+  margin: 0.55rem 0 0;
+}
+
+/* Desktop: centre rope + alternating cards ---------------------------- */
+@media (min-width: 48rem) {
+  .timeline {
+    border-left: 0;
+  }
+  /* the rope, drawn down the centre gutter */
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0.3rem;
+    bottom: 0;
+    width: 2px;
+    transform: translateX(-1px);
+    background: var(--rope);
+  }
+  .timeline li {
+    display: grid;
+    grid-template-columns: 1fr 3rem 1fr;
+    padding: 0;
+    margin-bottom: 1.75rem;
+  }
+  /* knot: outer ring seated on the centre line (li spans full width) */
+  .timeline li::before {
+    left: 50%;
+    top: 1rem;
+    transform: translateX(-50%);
+  }
+  .timeline li::after {
+    left: 50%;
+    top: calc(1rem + 5px);
+    transform: translateX(-50%);
+  }
+  /* each entry is a light card hugging the rope; odd left, even right */
+  .timeline .entry {
+    grid-column: 1;
+    background: color-mix(in srgb, var(--surface) 55%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.8rem 1.1rem 0.9rem;
+  }
+  .timeline li:nth-child(even) .entry {
+    grid-column: 3;
+  }
+  .timeline .event {
+    max-width: none;
+  }
 }
 
 /* --- Type kicker above entry titles --------------------------------- */

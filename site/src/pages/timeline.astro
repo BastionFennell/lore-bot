@@ -21,26 +21,28 @@ const events = (await getCollection('timeline')).sort((a, b) =>
     <ol class="timeline">
       {events.map((e) => (
         <li>
-          <div class="when">{e.data.display_date ?? e.data.date}</div>
-          <p set:html={inlineLinks(e.data.description)} />
-          {e.data.related.length > 0 && (
-            <p class="related">
-              Related:{' '}
-              {e.data.related.map((slug, i) => {
-                const target = lookupSlug(slug);
-                return (
-                  <>
-                    {i > 0 && ', '}
-                    {target ? (
-                      <a href={target.url}>{target.title}</a>
-                    ) : (
-                      <span class="stub-link" title="unknown entry">{`{{${slug}}}`}</span>
-                    )}
-                  </>
-                );
-              })}
-            </p>
-          )}
+          <div class="entry">
+            <div class="when">{e.data.display_date ?? e.data.date}</div>
+            <p class="event" set:html={inlineLinks(e.data.description)} />
+            {e.data.related.length > 0 && (
+              <p class="related">
+                Related:{' '}
+                {e.data.related.map((slug, i) => {
+                  const target = lookupSlug(slug);
+                  return (
+                    <>
+                      {i > 0 && ', '}
+                      {target ? (
+                        <a href={target.url}>{target.title}</a>
+                      ) : (
+                        <span class="stub-link" title="unknown entry">{`{{${slug}}}`}</span>
+                      )}
+                    </>
+                  );
+                })}
+              </p>
+            )}
+          </div>
         </li>
       ))}
     </ol>
