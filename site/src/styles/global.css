@@ -247,7 +247,7 @@ h2::after {
   content: '';
   position: absolute;
   left: 50%;
-  bottom: -5px;
+  bottom: -6px;
   width: 11px;
   height: 11px;
   transform: translateX(-50%);
@@ -368,9 +368,10 @@ article img {
   text-underline-offset: 0.16em;
 }
 .lore-link:hover {
-  color: var(--brass-text);
-  text-decoration-color: var(--brass);
-  /* a small whimsy: the underline breaks into waves on hover */
+  /* a small whimsy: the underline breaks into waves on hover — kept
+     sea-glass blue so the waves read as water, not rope */
+  color: var(--link);
+  text-decoration-color: var(--link);
   text-decoration-style: wavy;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
@@ -571,13 +572,37 @@ article img {
   border-radius: 50%;
   background: var(--brass);
 }
-/* Date is the anchor: sea-glass small-caps, first thing read */
+/* Date is the anchor: sea-glass small-caps framed by chart-corner ticks
+   (same motif as the index cards), first thing read */
 .timeline .when {
-  font-size: 1.05rem;
+  position: relative;
+  display: inline-block;
+  font-size: 1.125rem;
   font-weight: 500;
   color: var(--slate);
   line-height: 1.25;
-  margin-bottom: 0.15rem;
+  padding: 0.2rem 0.55rem;
+  margin-bottom: 0.3rem;
+}
+.timeline .when::before,
+.timeline .when::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: solid var(--brass);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.timeline .when::before {
+  top: 0;
+  left: 0;
+  border-width: 1px 0 0 1px;
+}
+.timeline .when::after {
+  bottom: 0;
+  right: 0;
+  border-width: 0 1px 1px 0;
 }
 .timeline .event {
   font-size: 1rem;
