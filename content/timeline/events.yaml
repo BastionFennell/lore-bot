@@ -1,3 +1,8 @@
 - id: the-kraken-destroys-the-tidal-schools-of
   date: '0847-02-09'
   description: The {{kraken}} destroys the {{tidal-schools}} of the Waxing Half.
+- id: zelda-and-driftwood-are-captured-by
+  date: '0847-03-12'
+  description: '{{zelda}} and {{driftwood}} are captured by {{lieutenant-commander-powderkeg}}.'
+  related:
+  - lieutenant-commander-powderkeg
