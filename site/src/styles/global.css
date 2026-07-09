@@ -1,75 +1,129 @@
-:root {
-  --bg: #fbfaf7;
-  --surface: #ffffff;
-  --text: #1d1b16;
-  --muted: #6b6559;
-  --border: #e4ded2;
-  --accent: #8a5a2b;
-  --accent-soft: #f0e6d6;
-  --link: #7a4a1e;
-  --stub: #a08e70;
-  --max: 52rem;
+/* =====================================================================
+   The Chart Room — visual theme for the Sundered Isles Chronicle
+   Naval logbook: ink on cold paper, brass instruments, fog over grey water.
+   Typography (IM Fell English display, Alegreya body), colour temperature,
+   and a whisper of paper grain carry the theme. No clip art.
+   ===================================================================== */
 
-  --badge-alive: #2f7d4f;
-  --badge-dead: #9a3b3b;
-  --badge-missing: #b07d1e;
-  --badge-unknown: #6b6559;
-  --badge-ally: #2f7d4f;
-  --badge-neutral: #6b6559;
-  --badge-hostile: #9a3b3b;
+/* --- Design tokens: Day watch (light) -------------------------------- */
+:root {
+  --bg: #f4f1ea;          /* warm fog-parchment ground */
+  --surface: #faf8f1;     /* lifted parchment for cards / panels */
+  --text: #1d2b3a;        /* ink-navy */
+  --muted: #5c6672;       /* slate-grey meta */
+  --link: #3d5a73;        /* slate-blue */
+  --border: #c9bda7;      /* driftwood-tan hairline */
+  --brass: #a9853b;       /* brass accent — used sparingly */
+  --brass-text: #856526;  /* AA-safe brass for hover text on parchment */
+  --rope: #c2ad82;        /* timeline rope, warm */
+  --stub: #7c7669;        /* muted, de-emphasised */
+
+  /* Wax-seal badges (shared across themes) */
+  --badge-alive: #2f6b4f;    /* deep sea-green */
+  --badge-dead: #7d3535;     /* oxblood */
+  --badge-missing: #b07d1e;  /* amber */
+  --badge-unknown: #4a5765;  /* slate */
+  --badge-ally: #2f6b4f;
+  --badge-neutral: #4a5765;
+  --badge-hostile: #7d3535;
+  --badge-text: #f2ede1;     /* parchment ink for dark seals */
+  --badge-text-dark: #241a05;/* deep ink for the amber seal */
+
+  --max: 58rem;
+  --measure: 68ch;
+  --grain-opacity: 0.03;
+
+  /* Paper grain: feTurbulence noise, painted at <=4% opacity */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* Compass rose (black shape) used as a mask so it inherits theme colour */
+  --compass: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='none' stroke='%23000' stroke-width='0.7'/%3E%3Cpath fill='%23000' d='M12 1L13.2 9L19.8 4.2L15 10.8L23 12L15 13.2L19.8 19.8L13.2 15L12 23L10.8 15L4.2 19.8L9 13.2L1 12L9 10.8L4.2 4.2L10.8 9Z'/%3E%3C/svg%3E");
 }
 
+/* --- Design tokens: Night watch (dark) ------------------------------- */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #16140f;
-    --surface: #1f1c15;
-    --text: #ece6d8;
-    --muted: #a49c8a;
-    --border: #34302650;
-    --accent: #d6a25f;
-    --accent-soft: #2a2418;
-    --link: #e0b678;
-    --stub: #97896b;
+    --bg: #0d141d;        /* deep ink blue-black */
+    --surface: #131c27;   /* lifted panel */
+    --text: #c9d2da;      /* moonlit silver */
+    --muted: #8a97a5;     /* desaturated slate */
+    --link: #7fa3c0;      /* lighter slate-blue */
+    --border: #2b3947;    /* desaturated slate hairline */
+    --brass: #c9a35a;     /* brass warms up */
+    --brass-text: #d3b26f;
+    --rope: #5c5443;
+    --stub: #7c8794;
 
-    --badge-alive: #58b57f;
-    --badge-dead: #d97070;
-    --badge-missing: #e0b45a;
-    --badge-unknown: #a49c8a;
-    --badge-ally: #58b57f;
-    --badge-neutral: #a49c8a;
-    --badge-hostile: #d97070;
+    --grain-opacity: 0.04;
   }
 }
 
+/* --- Reset / base ---------------------------------------------------- */
 * {
   box-sizing: border-box;
 }
 
 html {
-  font-size: 17px;
+  font-size: 18px;
 }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  font-family: 'Alegreya', Georgia, 'Iowan Old Style', serif;
+  font-weight: 400;
   line-height: 1.65;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Paper grain overlay — fixed so the sheet holds still under scrolling */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: var(--grain);
+  background-size: 160px 160px;
+  opacity: var(--grain-opacity);
+  pointer-events: none;
+  z-index: 9999;
 }
 
 a {
   color: var(--link);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
+  transition: color 150ms ease;
 }
 a:hover {
   text-decoration-thickness: 2px;
 }
 
+code {
+  font-family: 'Iosevka', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 0.9em;
+  background: color-mix(in srgb, var(--brass) 12%, transparent);
+  padding: 0.05em 0.35em;
+  border-radius: 3px;
+}
+
+/* --- Small-caps label helper ---------------------------------------- */
+/* nav, section labels, meta rows, badges: Alegreya small-caps + tracking */
+.site-nav a,
+.related,
+.meta dt,
+.timeline .when,
+.badge,
+.tag-list a {
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+}
+
+/* --- Header ---------------------------------------------------------- */
 .site-header {
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
 }
 .site-header .inner {
   max-width: var(--max);
@@ -77,28 +131,56 @@ a:hover {
   padding: 1rem 1.25rem;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem 1.25rem;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
 }
 .brand {
-  font-weight: 700;
-  font-size: 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   color: var(--text);
   text-decoration: none;
   margin-right: auto;
 }
+.brand .compass {
+  color: var(--brass);
+  flex: none;
+  transition: transform 400ms ease;
+}
+.brand:hover .compass {
+  transform: rotate(30deg);
+}
+.brand-text {
+  font-family: 'IM Fell English', Georgia, serif;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
 .site-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1rem;
-  font-family: system-ui, sans-serif;
+  gap: 0.25rem 1.25rem;
   font-size: 0.95rem;
 }
+.site-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
+}
+.site-nav a:hover {
+  color: var(--text);
+}
+.site-nav a.active {
+  color: var(--text);
+  border-bottom-color: var(--brass);
+}
 
+/* --- Main / footer --------------------------------------------------- */
 main {
   max-width: var(--max);
   margin: 0 auto;
-  padding: 2rem 1.25rem 4rem;
+  padding: 2.5rem 1.25rem 4rem;
 }
 
 .site-footer {
@@ -107,198 +189,432 @@ main {
   padding: 2rem 1.25rem;
   border-top: 1px solid var(--border);
   color: var(--muted);
-  font-family: system-ui, sans-serif;
-  font-size: 0.85rem;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+  font-size: 0.95rem;
 }
 
+/* --- Headings -------------------------------------------------------- */
 h1,
 h2,
 h3 {
-  line-height: 1.25;
-  font-family: 'Iowan Old Style', Georgia, serif;
+  font-family: 'IM Fell English', Georgia, serif;
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--text);
 }
 h1 {
-  font-size: 2rem;
-  margin: 0 0 0.25rem;
+  font-size: clamp(2.1rem, 5vw, 2.9rem);
+  margin: 0 0 0.35rem;
+  letter-spacing: 0.005em;
 }
+h2 {
+  font-size: 1.7rem;
+  margin: 2.25rem 0 1rem;
+  position: relative;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+/* section-rule mark: a small brass compass-point centred on the hairline */
+h2::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 7px;
+  height: 7px;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--brass);
+  opacity: 0.85;
+}
+h3 {
+  font-size: 1.3rem;
+  margin: 1.75rem 0 0.6rem;
+}
+
 .page-summary {
   color: var(--muted);
   font-style: italic;
+  font-size: 1.1rem;
   margin-top: 0;
+  max-width: var(--measure);
 }
 
-/* Badges -------------------------------------------------------------- */
+/* Article reading measure */
+article {
+  max-width: var(--measure);
+}
+article img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* --- Badges (wax seals) --------------------------------------------- */
 .badge {
   display: inline-block;
-  font-family: system-ui, sans-serif;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.12rem 0.5rem 0.02rem;
+  border-radius: 3px;
+  color: var(--badge-text);
   vertical-align: middle;
+  margin-left: 0.5rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.28);
 }
 .badge-alive { background: var(--badge-alive); }
 .badge-dead { background: var(--badge-dead); }
-.badge-missing { background: var(--badge-missing); }
+.badge-missing { background: var(--badge-missing); color: var(--badge-text-dark); }
 .badge-unknown { background: var(--badge-unknown); }
 .badge-ally { background: var(--badge-ally); }
 .badge-neutral { background: var(--badge-neutral); }
 .badge-hostile { background: var(--badge-hostile); }
 
-/* Metadata table ------------------------------------------------------ */
+/* --- Metadata table -------------------------------------------------- */
 .meta {
-  font-family: system-ui, sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.98rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  margin: 1.25rem 0;
+  border-radius: 4px;
+  padding: 0.85rem 1.1rem;
+  margin: 1.5rem 0;
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.35rem 1rem;
+  gap: 0.4rem 1.25rem;
 }
 .meta dt {
   color: var(--muted);
-  font-weight: 600;
+  font-size: 0.92rem;
 }
 .meta dd {
   margin: 0;
 }
 
-/* Tags ---------------------------------------------------------------- */
+/* --- Tags ------------------------------------------------------------ */
 .tag-list {
   list-style: none;
   padding: 0;
-  margin: 0.75rem 0;
+  margin: 0.85rem 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  font-family: system-ui, sans-serif;
+  gap: 0.45rem;
 }
 .tag-list a {
   display: inline-block;
-  font-size: 0.8rem;
-  padding: 0.1rem 0.55rem;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  font-size: 0.85rem;
+  padding: 0.05rem 0.6rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
   text-decoration: none;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+.tag-list a:hover {
+  color: var(--brass-text);
+  border-color: var(--brass);
 }
 
-/* Prose {{slug}} links ------------------------------------------------ */
+/* --- Prose {{slug}} links -------------------------------------------- */
+/* Lore links read as annotated ink references; hover warms to brass. */
 .lore-link {
-  font-variant: small-caps;
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--link) 45%, transparent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.16em;
 }
+.lore-link:hover {
+  color: var(--brass-text);
+  text-decoration-color: var(--brass);
+}
+/* Stub / uncharted references: dashed, muted, annotated as (uncharted) */
 .stub-link {
   color: var(--stub);
   border-bottom: 1px dashed var(--stub);
   cursor: help;
 }
+.stub-link::after {
+  content: ' (uncharted)';
+  font-style: italic;
+  font-size: 0.85em;
+  border-bottom: 0;
+}
 
-/* Referenced-by ------------------------------------------------------- */
+/* --- Mentioned in the record (backlinks) ----------------------------- */
 .backlinks {
-  margin-top: 2.5rem;
+  margin-top: 2.75rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--border);
 }
 .backlinks h2 {
-  font-size: 1.1rem;
-  font-family: system-ui, sans-serif;
+  font-size: 1.35rem;
+  border-bottom: 0;
+  padding-bottom: 0;
+  margin-bottom: 0.5rem;
+}
+.backlinks h2::after {
+  display: none;
+}
+.backlinks ul {
+  margin: 0;
+  padding-left: 1.1rem;
 }
 
-/* Cards / index lists ------------------------------------------------- */
+/* --- Cards / index lists -------------------------------------------- */
 .card-list {
   list-style: none;
   padding: 0;
-  margin: 0.5rem 0 2rem;
+  margin: 1rem 0 2.5rem;
   display: grid;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 .card-list li {
+  position: relative;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.85rem 1rem;
+  border-radius: 4px;
+  padding: 1rem 1.15rem;
   background: var(--surface);
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+/* tiny brass corner ticks, opposite corners */
+.card-list li::before,
+.card-list li::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: solid var(--brass);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.card-list li::before {
+  top: 5px;
+  left: 5px;
+  border-width: 1px 0 0 1px;
+}
+.card-list li::after {
+  bottom: 5px;
+  right: 5px;
+  border-width: 0 1px 1px 0;
+}
+.card-list li:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--brass) 40%, var(--border));
+  box-shadow: 0 2px 10px rgba(29, 43, 58, 0.08);
+}
+.card-list li:hover::before,
+.card-list li:hover::after {
+  opacity: 0.8;
 }
 .card-list .title {
-  font-weight: 700;
+  font-family: 'IM Fell English', Georgia, serif;
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+.card-list .title a {
+  color: var(--text);
+  text-decoration: none;
+  /* tide-line: brass underline sweeps in on hover */
+  background-image: linear-gradient(var(--brass), var(--brass));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1.5px;
+  transition: background-size 250ms ease-out;
+}
+.card-list li:hover .title a {
+  background-size: 100% 1.5px;
 }
 .card-list .summary {
   color: var(--muted);
-  font-size: 0.92rem;
+  font-style: italic;
+  font-size: 1rem;
+  margin-top: 0.25rem;
 }
 
-/* Map image ----------------------------------------------------------- */
+/* --- Map image ------------------------------------------------------- */
 .map-image {
   max-width: 100%;
   height: auto;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 4px;
   display: block;
-  margin: 1.25rem 0;
+  margin: 1.5rem 0;
 }
 
-/* Glossary ------------------------------------------------------------ */
+/* --- Glossary -------------------------------------------------------- */
+.glossary {
+  margin-top: 1.5rem;
+}
 .glossary dt {
-  font-weight: 700;
-  margin-top: 1.25rem;
-  scroll-margin-top: 1rem;
+  font-family: 'IM Fell English', Georgia, serif;
+  font-size: 1.3rem;
+  line-height: 1.2;
+  margin-top: 1.75rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+  scroll-margin-top: 1.5rem;
 }
 .glossary dd {
-  margin: 0.15rem 0 0;
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  max-width: var(--measure);
+}
+/* anchored term gets a brass left tick */
+.glossary dt:target {
+  border-left: 3px solid var(--brass);
+  padding-left: 0.6rem;
+  margin-left: -0.75rem;
 }
 
-/* Timeline ------------------------------------------------------------ */
+/* --- Timeline (taut rope + knot markers) ---------------------------- */
 .timeline {
   list-style: none;
   padding: 0;
-  margin: 1.5rem 0;
-  border-left: 2px solid var(--border);
+  margin: 2rem 0;
+  border-left: 2px solid var(--rope);
 }
 .timeline li {
   position: relative;
-  padding: 0 0 1.75rem 1.5rem;
+  padding: 0 0 2rem 1.75rem;
 }
+/* concentric knot: outer ring + brass centre */
 .timeline li::before {
   content: '';
   position: absolute;
-  left: -7px;
-  top: 0.35rem;
-  width: 12px;
-  height: 12px;
+  left: -8px;
+  top: 0.3rem;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--bg);
+  border: 2px solid var(--rope);
+}
+.timeline li::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: calc(0.3rem + 5px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--brass);
 }
 .timeline .when {
-  font-family: system-ui, sans-serif;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+}
+.timeline p {
+  max-width: var(--measure);
 }
 
+/* --- Related meta line ---------------------------------------------- */
 .related {
-  font-family: system-ui, sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--muted);
+  margin-bottom: 0.25rem;
 }
 
-/* Empty state --------------------------------------------------------- */
+/* --- Empty state (the chronicle awaits) ----------------------------- */
 .empty-state {
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  padding: 1.5rem 1.25rem;
-  margin: 1rem 0 2rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2rem 1.5rem;
+  margin: 1.5rem 0 2.5rem;
   color: var(--muted);
+  font-family: 'IM Fell English', Georgia, serif;
   font-style: italic;
+  font-size: 1.3rem;
   text-align: center;
   background: var(--surface);
+}
+.empty-state::before {
+  content: '';
+  display: block;
+  width: 30px;
+  height: 30px;
+  margin: 0 auto 0.75rem;
+  background-color: var(--brass);
+  opacity: 0.75;
+  -webkit-mask: var(--compass) center / contain no-repeat;
+  mask: var(--compass) center / contain no-repeat;
 }
 
 .overflow-x {
   overflow-x: auto;
+}
+
+/* --- Home hero ------------------------------------------------------- */
+.hero {
+  text-align: center;
+  padding: 2rem 0 2.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.hero .compass {
+  color: var(--brass);
+  margin-bottom: 0.75rem;
+}
+.hero h1 {
+  font-size: clamp(2.6rem, 8vw, 4rem);
+  margin: 0;
+}
+.hero .page-summary {
+  margin: 0.5rem auto 0;
+  font-size: 1.2rem;
+}
+.hero-note {
+  color: var(--muted);
+  font-style: italic;
+  max-width: var(--measure);
+  margin: 1.5rem 0 2rem;
+}
+
+/* --- Page-load stagger (reduced-motion respected) -------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  main > *,
+  main > article > * {
+    animation: fadeUp 0.38s ease-out both;
+  }
+  main > *:nth-child(1),
+  main > article > *:nth-child(1) { animation-delay: 0ms; }
+  main > *:nth-child(2),
+  main > article > *:nth-child(2) { animation-delay: 40ms; }
+  main > *:nth-child(3),
+  main > article > *:nth-child(3) { animation-delay: 80ms; }
+  main > *:nth-child(4),
+  main > article > *:nth-child(4) { animation-delay: 120ms; }
+  main > *:nth-child(5),
+  main > article > *:nth-child(5) { animation-delay: 160ms; }
+  main > *:nth-child(6),
+  main > article > *:nth-child(6) { animation-delay: 200ms; }
+  main > *:nth-child(7),
+  main > article > *:nth-child(7) { animation-delay: 240ms; }
+  main > *:nth-child(n + 8),
+  main > article > *:nth-child(n + 8) { animation-delay: 280ms; }
+
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* --- Responsive ------------------------------------------------------ */
+@media (max-width: 34rem) {
+  .site-header .inner {
+    align-items: flex-start;
+  }
+  .brand-text {
+    font-size: 1.3rem;
+  }
+  main {
+    padding-top: 1.75rem;
+  }
 }
