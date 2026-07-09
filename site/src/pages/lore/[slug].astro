@@ -29,22 +29,14 @@ const typeLabel = {
 <Base title={data.title} summary={data.summary}>
   <article>
     <p class="related">{typeLabel}</p>
-    <h1>
-      {data.title}
-      {data.type === 'npc' && (
-        <span class={`badge badge-${data.status}`}>{data.status}</span>
-      )}
-      {data.type === 'faction' && (
-        <span class={`badge badge-${data.disposition}`}>{data.disposition}</span>
-      )}
-    </h1>
+    <h1>{data.title}</h1>
     <p class="page-summary">{data.summary}</p>
 
     <dl class="meta">
       {data.type === 'npc' && (
         <>
           <dt>Status</dt>
-          <dd>{data.status}</dd>
+          <dd><span class={`badge badge-${data.status}`}>{data.status}</span></dd>
           {data.affiliation && (
             <>
               <dt>Affiliation</dt>
@@ -62,7 +54,7 @@ const typeLabel = {
       {data.type === 'faction' && (
         <>
           <dt>Disposition</dt>
-          <dd>{data.disposition}</dd>
+          <dd><span class={`badge badge-${data.disposition}`}>{data.disposition}</span></dd>
           {data.leader && (
             <>
               <dt>Leader</dt>

@@ -12,6 +12,7 @@
   --text: #1d2b3a;        /* ink-navy */
   --muted: #5c6672;       /* slate-grey meta */
   --link: #3d5a73;        /* slate-blue */
+  --slate: #3d5a73;       /* structural blue: kickers, chips, meta labels, diamonds */
   --border: #c9bda7;      /* driftwood-tan hairline */
   --brass: #a9853b;       /* brass accent — used sparingly */
   --brass-text: #856526;  /* AA-safe brass for hover text on parchment */
@@ -48,6 +49,7 @@
     --text: #c9d2da;      /* moonlit silver */
     --muted: #8a97a5;     /* desaturated slate */
     --link: #7fa3c0;      /* lighter slate-blue */
+    --slate: #7fa3c0;     /* structural blue (night watch) */
     --border: #2b3947;    /* desaturated slate hairline */
     --brass: #c9a35a;     /* brass warms up */
     --brass-text: #d3b26f;
@@ -145,10 +147,13 @@ code {
 .brand .compass {
   color: var(--brass);
   flex: none;
+  /* Optical nudge: the wordmark has ascenders but no descenders, so its ink
+     block centres ~2px above the line box; lift the compass to match. */
+  transform: translateY(-1.5px);
   transition: transform 400ms ease;
 }
 .brand:hover .compass {
-  transform: rotate(30deg);
+  transform: translateY(-1.5px) rotate(30deg);
 }
 .brand-text {
   font-family: 'IM Fell English', Georgia, serif;
@@ -214,8 +219,11 @@ h2 {
   position: relative;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border);
+  /* rule + diamond respect the reading measure so the diamond anchors to
+     the text column rather than the full container. */
+  max-width: var(--measure);
 }
-/* section-rule mark: a small brass compass-point centred on the hairline */
+/* section-rule mark: a small slate compass-point centred on the hairline */
 h2::after {
   content: '';
   position: absolute;
@@ -224,8 +232,8 @@ h2::after {
   width: 7px;
   height: 7px;
   transform: translateX(-50%) rotate(45deg);
-  background: var(--brass);
-  opacity: 0.85;
+  background: var(--slate);
+  opacity: 0.9;
 }
 h3 {
   font-size: 1.3rem;
@@ -271,24 +279,34 @@ article img {
 .badge-neutral { background: var(--badge-neutral); }
 .badge-hostile { background: var(--badge-hostile); }
 
-/* --- Metadata table -------------------------------------------------- */
+/* --- Metadata strip -------------------------------------------------- */
+/* A slim horizontal band: small-caps slate labels + inline values, wrapping
+   on narrow screens, over a faint blue-tinted wash. */
 .meta {
-  font-size: 0.98rem;
-  background: var(--surface);
+  font-size: 0.95rem;
+  background: color-mix(in srgb, var(--link) 6%, var(--surface));
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 0.85rem 1.1rem;
-  margin: 1.5rem 0;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.4rem 1.25rem;
+  padding: 0.5rem 0.9rem;
+  margin: 1.25rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  row-gap: 0.35rem;
 }
 .meta dt {
-  color: var(--muted);
-  font-size: 0.92rem;
+  color: var(--slate);
+  font-size: 0.9rem;
+  margin-left: 1.4rem;   /* separates each label/value group */
+}
+.meta dt:first-of-type {
+  margin-left: 0;
 }
 .meta dd {
-  margin: 0;
+  margin: 0 0 0 0.5rem;  /* keep the value tight to its label */
+}
+.meta .badge {
+  margin-left: 0;        /* dd already spaces it; wax seal sits by its label */
 }
 
 /* --- Tags ------------------------------------------------------------ */
@@ -305,9 +323,9 @@ article img {
   font-size: 0.85rem;
   padding: 0.05rem 0.6rem;
   border-radius: 3px;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--slate) 45%, var(--border));
   background: transparent;
-  color: var(--muted);
+  color: var(--slate);
   text-decoration: none;
   transition: border-color 150ms ease, color 150ms ease;
 }
@@ -368,7 +386,8 @@ article img {
   padding: 0;
   margin: 1rem 0 2.5rem;
   display: grid;
-  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: 1.25rem;
 }
 .card-list li {
   position: relative;
@@ -378,7 +397,14 @@ article img {
   background: var(--surface);
   transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
 }
-/* tiny brass corner ticks, opposite corners */
+/* whole card is clickable via a stretched link on the title (below);
+   keep a visible focus ring for keyboard navigation. */
+.card-list li:has(a:focus-visible) {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+/* tiny brass corner ticks, opposite corners (decorative — never intercept
+   clicks meant for the stretched link) */
 .card-list li::before,
 .card-list li::after {
   content: '';
@@ -387,6 +413,7 @@ article img {
   height: 9px;
   border: solid var(--brass);
   opacity: 0;
+  pointer-events: none;
   transition: opacity 200ms ease;
 }
 .card-list li::before {
@@ -423,6 +450,12 @@ article img {
   background-size: 0% 1.5px;
   transition: background-size 250ms ease-out;
 }
+/* stretched link: the title anchor covers the whole card */
+.card-list .title a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
 .card-list li:hover .title a {
   background-size: 100% 1.5px;
 }
@@ -431,6 +464,11 @@ article img {
   font-style: italic;
   font-size: 1rem;
   margin-top: 0.25rem;
+  /* clamp to ~3 lines so cards in a row stay tidy heights */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* --- Map image ------------------------------------------------------- */
@@ -509,10 +547,10 @@ article img {
   max-width: var(--measure);
 }
 
-/* --- Related meta line ---------------------------------------------- */
+/* --- Type kicker above entry titles --------------------------------- */
 .related {
   font-size: 0.9rem;
-  color: var(--muted);
+  color: var(--slate);
   margin-bottom: 0.25rem;
 }
 
@@ -616,5 +654,9 @@ article img {
   }
   main {
     padding-top: 1.75rem;
+  }
+  /* single column below the two-card width — never overflow the 19rem min */
+  .card-list {
+    grid-template-columns: 1fr;
   }
 }
